@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard.jsx";
 
-import luxury1 from "../assets/images/Luxury1.jpg";
+import luxury1 from "../assets/images/luxury1.jpg";
 import luxury2 from "../assets/images/luxury2.jpg";
 import luxury3 from "../assets/images/luxury3.jpg";
 import luxury4 from "../assets/images/luxury4.jpg";
