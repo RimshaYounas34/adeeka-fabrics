@@ -15,8 +15,6 @@ import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
-connectDB();
-
 const app = express();
 
 // =====================================================
@@ -80,11 +78,7 @@ app.use((req, res) => {
 });
 
 // =====================================================
-// SERVER
+// EXPORT APP FOR VERCEL
 // =====================================================
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default app;
