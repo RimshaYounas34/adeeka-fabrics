@@ -11,8 +11,7 @@ import sale6 from "../assets/images/sale6.jpg";
 import sale7 from "../assets/images/sale7.jpg";
 import sale8 from "../assets/images/sale8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const SalePage = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

@@ -10,8 +10,7 @@ import silk6 from "../assets/images/silk6.jpg";
 import silk7 from "../assets/images/silk7.jpg";
 import silk8 from "../assets/images/silk8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const SilkCollection = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

@@ -8,8 +8,7 @@ import new3 from "../assets/images/new1.jpg";
 import new4 from "../assets/images/new7.jpg";
 import new5 from "../assets/images/new8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const NewArrivalsPage = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

@@ -2,8 +2,7 @@ import { motion } from "framer-motion";
 import { Heart, ShoppingBag } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const ProductCard = ({ product }) => {
   const { addToCart, toggleWishlist, wishlist } = useCart();
 

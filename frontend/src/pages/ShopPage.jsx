@@ -11,8 +11,7 @@ import unstiched6 from "../assets/images/unstiched6.jpg";
 import unstiched7 from "../assets/images/unstiched7.jpg";
 import unstiched8 from "../assets/images/unstiched8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const ShopPage = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

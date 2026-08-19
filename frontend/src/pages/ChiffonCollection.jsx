@@ -10,8 +10,7 @@ import chiffon6 from "../assets/images/chiffon6.jpg";
 import chiffon7 from "../assets/images/chiffon7.jpg";
 import chiffon8 from "../assets/images/chiffon8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const ChiffonCollection = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

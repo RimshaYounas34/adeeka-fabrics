@@ -12,8 +12,7 @@ import lawn6 from "../assets/images/lawn6.jpg";
 import lawn7 from "../assets/images/lawn7.jpg";
 import lawn8 from "../assets/images/lawn8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const LawnCollection = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

@@ -23,8 +23,7 @@ import formal18 from "../assets/images/formal18.jpg";
 import formal19 from "../assets/images/formal19.jpg";
 import formal20 from "../assets/images/formal20.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 // =====================================================
 // OLD FORMAL PRODUCTS
 // Ye images bilkul same rahengi

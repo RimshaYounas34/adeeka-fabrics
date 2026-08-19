@@ -11,8 +11,7 @@ import luxury6 from "../assets/images/luxury6.jpg";
 import luxury7 from "../assets/images/luxury7.jpg";
 import luxury8 from "../assets/images/luxury8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const LuxuryPage = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);

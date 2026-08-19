@@ -11,8 +11,7 @@ import collection6 from "../assets/images/collection6.jpg";
 import collection7 from "../assets/images/collection7.jpg";
 import collection8 from "../assets/images/collection8.jpg";
 
-const API_URL = "http://localhost:5000";
-
+const API_URL = import.meta.env.VITE_API_URL;
 const CollectionsPage = () => {
   const [sort, setSort] = useState("");
   const [backendProducts, setBackendProducts] = useState([]);
