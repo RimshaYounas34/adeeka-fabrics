@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -11,6 +10,16 @@ import {
 import { auth, googleProvider } from "../firebase.js";
 import logo from "../assets/images/adeeka-logo.png";
 
+// =====================================================
+// BACKEND API
+// =====================================================
+
+const API_URL = "http://localhost:5000";
+
+// =====================================================
+// REGISTER PAGE
+// =====================================================
+
 const RegisterPage = () => {
   const navigate = useNavigate();
 
@@ -18,10 +27,14 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // ================= SUCCESS POPUP =================
+  // =====================================================
+  // SUCCESS POPUP
+  // =====================================================
 
   const showSuccessPopup = (message) => {
     setSuccessMessage(message);
@@ -32,32 +45,64 @@ const RegisterPage = () => {
     }, 1800);
   };
 
-  // ================= SAVE USER TO MONGODB =================
+  // =====================================================
+  // SAVE USER TO MONGODB
+  // =====================================================
 
   const saveUserToMongoDB = async (userData) => {
-    const response = await fetch("http://localhost:5000/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
+    try {
+      console.log("=================================");
+      console.log("SENDING USER TO MONGODB");
+      console.log(userData);
+      console.log("=================================");
 
-    const data = await response.json();
+      const response = await fetch(
+        `${API_URL}/api/users`,
+        {
+          method: "POST",
 
-    if (!response.ok) {
-      throw new Error(data.message || "User could not be saved");
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(userData),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("=================================");
+      console.log("MONGODB USER RESPONSE");
+      console.log(data);
+      console.log("STATUS:", response.status);
+      console.log("=================================");
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "User could not be saved"
+        );
+      }
+
+      return data;
+
+    } catch (error) {
+      console.log("MongoDB Save Error:", error);
+      throw error;
     }
-
-    return data;
   };
 
-  // ================= EMAIL SIGNUP =================
+  // =====================================================
+  // EMAIL SIGNUP
+  // =====================================================
 
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !password) {
+    // -------------------------------------------------
+    // VALIDATION
+    // -------------------------------------------------
+
+    if (!name.trim() || !email.trim() || !password) {
       alert("Please fill all fields");
       return;
     }
@@ -68,31 +113,56 @@ const RegisterPage = () => {
     }
 
     try {
-      // Create Firebase account
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
+      setLoading(true);
+
+      // =================================================
+      // CREATE USER IN FIREBASE
+      // =================================================
+
+      const result =
+        await createUserWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password
+        );
+
+      const firebaseUser = result.user;
+
+      console.log(
+        "Firebase User Created:",
+        firebaseUser
       );
 
-      // Add name to Firebase
-      await updateProfile(result.user, {
-        displayName: name,
+      // =================================================
+      // UPDATE FIREBASE NAME
+      // =================================================
+
+      await updateProfile(firebaseUser, {
+        displayName: name.trim(),
       });
 
-      // Save user in MongoDB
+      // =================================================
+      // SAVE USER TO MONGODB
+      // =================================================
+
       await saveUserToMongoDB({
-        name: name,
-        email: email,
-        password: password,
+        firebaseUid: firebaseUser.uid,
+        name: name.trim(),
+        email: firebaseUser.email,
+        password: "",
+        role: "user",
       });
 
-      // Save user in localStorage
+      // =================================================
+      // SAVE USER IN LOCAL STORAGE
+      // =================================================
+
       const user = {
-        uid: result.user.uid,
-        name: name,
-        email: result.user.email,
+        uid: firebaseUser.uid,
+        name: name.trim(),
+        email: firebaseUser.email,
         photo: "",
+        role: "user",
       };
 
       localStorage.setItem(
@@ -100,32 +170,89 @@ const RegisterPage = () => {
         JSON.stringify(user)
       );
 
-      // Success
+      // =================================================
+      // SUCCESS
+      // =================================================
+
       showSuccessPopup(
         `Welcome ${name}! Your account has been created successfully.`
       );
 
     } catch (error) {
-      console.log("Signup Error:", error);
+      console.log("=================================");
+      console.log("SIGNUP ERROR:", error);
+      console.log("CODE:", error.code);
+      console.log("MESSAGE:", error.message);
+      console.log("=================================");
 
-      if (error.code === "auth/email-already-in-use") {
-        alert("This email is already registered. Please login.");
-      } else if (error.code === "auth/invalid-email") {
-        alert("Please enter a valid email.");
-      } else if (error.code === "auth/weak-password") {
-        alert("Password must be at least 6 characters.");
-      } else if (error.message === "User already exists") {
-        alert("This email already exists in MongoDB.");
+      // -------------------------------------------------
+      // FIREBASE ERRORS
+      // -------------------------------------------------
+
+      if (
+        error.code ===
+        "auth/email-already-in-use"
+      ) {
+        alert(
+          "This email is already registered. Please login."
+        );
+
+      } else if (
+        error.code ===
+        "auth/invalid-email"
+      ) {
+        alert(
+          "Please enter a valid email."
+        );
+
+      } else if (
+        error.code ===
+        "auth/weak-password"
+      ) {
+        alert(
+          "Password must be at least 6 characters."
+        );
+
+      } else if (
+        error.code ===
+        "auth/operation-not-allowed"
+      ) {
+        alert(
+          "Email/Password signup is disabled in Firebase. Please enable Email/Password Authentication in Firebase Console."
+        );
+
+      } else if (
+        error.message ===
+        "User already exists"
+      ) {
+        alert(
+          "This user already exists."
+        );
+
       } else {
-        alert(error.message || "Signup failed. Please try again.");
+        alert(
+          error.message ||
+          "Signup failed. Please try again."
+        );
       }
+
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ================= GOOGLE SIGNUP =================
+  // =====================================================
+  // GOOGLE SIGNUP
+  // =====================================================
 
   const handleGoogleSignup = async () => {
     try {
+      setLoading(true);
+
+      // =================================================
+      // GOOGLE LOGIN
+      // =================================================
+
       const result = await signInWithPopup(
         auth,
         googleProvider
@@ -134,30 +261,35 @@ const RegisterPage = () => {
       const googleUser = result.user;
 
       const googleName =
-        googleUser.displayName || "Google User";
+        googleUser.displayName ||
+        "Google User";
 
-      const googleEmail = googleUser.email;
+      const googleEmail =
+        googleUser.email;
 
-      // Save Google user in MongoDB
-      try {
-        await saveUserToMongoDB({
-          name: googleName,
-          email: googleEmail,
-          password: googleUser.uid,
-        });
-      } catch (error) {
-        // If user already exists, continue
-        if (error.message !== "User already exists") {
-          throw error;
-        }
-      }
+      // =================================================
+      // SAVE GOOGLE USER TO MONGODB
+      // =================================================
 
-      // Save user in localStorage
+      await saveUserToMongoDB({
+        firebaseUid: googleUser.uid,
+        name: googleName,
+        email: googleEmail,
+        password: "",
+        role: "user",
+      });
+
+      // =================================================
+      // SAVE LOCAL STORAGE
+      // =================================================
+
       const user = {
         uid: googleUser.uid,
         name: googleName,
         email: googleEmail,
-        photo: googleUser.photoURL || "",
+        photo:
+          googleUser.photoURL || "",
+        role: "user",
       };
 
       localStorage.setItem(
@@ -165,26 +297,41 @@ const RegisterPage = () => {
         JSON.stringify(user)
       );
 
-      // Success
+      // =================================================
+      // SUCCESS
+      // =================================================
+
       showSuccessPopup(
         `Welcome ${googleName}! Google signup successful.`
       );
 
     } catch (error) {
-      console.log("Google Signup Error:", error);
+      console.log(
+        "Google Signup Error:",
+        error
+      );
 
-      if (error.code === "auth/popup-closed-by-user") {
+      if (
+        error.code ===
+        "auth/popup-closed-by-user"
+      ) {
         return;
       }
 
-      if (error.code === "auth/popup-blocked") {
+      if (
+        error.code ===
+        "auth/popup-blocked"
+      ) {
         alert(
           "Google popup was blocked. Please allow popups."
         );
         return;
       }
 
-      if (error.code === "auth/cancelled-popup-request") {
+      if (
+        error.code ===
+        "auth/cancelled-popup-request"
+      ) {
         return;
       }
 
@@ -192,13 +339,20 @@ const RegisterPage = () => {
         error.message ||
         "Google signup failed. Please try again."
       );
+
+    } finally {
+      setLoading(false);
     }
   };
+
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
     <section className="min-h-screen bg-[#f5eee4] flex items-center justify-center px-6 py-12">
 
-      {/* ================= REGISTER CARD ================= */}
+      {/* REGISTER CARD */}
 
       <div className="w-full max-w-md bg-white p-8 md:p-10 shadow-sm">
 
@@ -230,11 +384,12 @@ const RegisterPage = () => {
 
         </div>
 
-        {/* GOOGLE SIGNUP */}
+        {/* GOOGLE */}
 
         <button
           type="button"
           onClick={handleGoogleSignup}
+          disabled={loading}
           className="
             w-full
             border
@@ -248,13 +403,19 @@ const RegisterPage = () => {
             text-[#17110d]
             hover:bg-[#f5eee4]
             transition
+            disabled:opacity-50
+            disabled:cursor-not-allowed
           "
         >
+
           <span className="font-bold text-base">
             G
           </span>
 
-          Continue with Google
+          {loading
+            ? "Please wait..."
+            : "Continue with Google"}
+
         </button>
 
         {/* OR */}
@@ -289,8 +450,11 @@ const RegisterPage = () => {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) =>
+                setName(e.target.value)
+              }
               placeholder="Enter your name"
+              disabled={loading}
               className="
                 w-full
                 border
@@ -300,6 +464,7 @@ const RegisterPage = () => {
                 text-sm
                 outline-none
                 focus:border-[#b18442]
+                disabled:bg-gray-50
               "
             />
 
@@ -316,8 +481,11 @@ const RegisterPage = () => {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               placeholder="Enter your email"
+              disabled={loading}
               className="
                 w-full
                 border
@@ -327,6 +495,7 @@ const RegisterPage = () => {
                 text-sm
                 outline-none
                 focus:border-[#b18442]
+                disabled:bg-gray-50
               "
             />
 
@@ -343,8 +512,11 @@ const RegisterPage = () => {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
               placeholder="Create a password"
+              disabled={loading}
               className="
                 w-full
                 border
@@ -354,6 +526,7 @@ const RegisterPage = () => {
                 text-sm
                 outline-none
                 focus:border-[#b18442]
+                disabled:bg-gray-50
               "
             />
 
@@ -363,6 +536,7 @@ const RegisterPage = () => {
 
           <button
             type="submit"
+            disabled={loading}
             className="
               w-full
               bg-[#17110d]
@@ -373,9 +547,15 @@ const RegisterPage = () => {
               tracking-widest
               hover:bg-[#b18442]
               transition
+              disabled:opacity-50
+              disabled:cursor-not-allowed
             "
           >
-            Sign Up
+
+            {loading
+              ? "Creating Account..."
+              : "Sign Up"}
+
           </button>
 
         </form>
@@ -397,70 +577,80 @@ const RegisterPage = () => {
 
       </div>
 
-      {/* ================= SUCCESS POPUP ================= */}
+      {/* SUCCESS POPUP */}
 
       {showSuccess && (
 
-        <div className="
-          fixed
-          inset-0
-          z-[100]
-          flex
-          items-center
-          justify-center
-          bg-black/40
-          px-5
-        ">
+        <div
+          className="
+            fixed
+            inset-0
+            z-[100]
+            flex
+            items-center
+            justify-center
+            bg-black/40
+            px-5
+          "
+        >
 
-          <div className="
-            bg-white
-            w-full
-            max-w-sm
-            p-8
-            text-center
-            shadow-2xl
-          ">
+          <div
+            className="
+              bg-white
+              w-full
+              max-w-sm
+              p-8
+              text-center
+              shadow-2xl
+            "
+          >
 
-            {/* CHECK */}
-
-            <div className="
-              mx-auto
-              mb-5
-              w-14
-              h-14
-              rounded-full
-              bg-[#b18442]
-              text-white
-              flex
-              items-center
-              justify-center
-              text-2xl
-            ">
+            <div
+              className="
+                mx-auto
+                mb-5
+                w-14
+                h-14
+                rounded-full
+                bg-[#b18442]
+                text-white
+                flex
+                items-center
+                justify-center
+                text-2xl
+              "
+            >
               ✓
             </div>
 
-            <h2 className="
-              font-serif
-              text-2xl
-              text-[#17110d]
-              mb-2
-            ">
+            <h2
+              className="
+                font-serif
+                text-2xl
+                text-[#17110d]
+                mb-2
+              "
+            >
               Success!
             </h2>
 
-            <p className="
-              text-sm
-              text-[#75695e]
-              leading-6
-            ">
+            <p
+              className="
+                text-sm
+                text-[#75695e]
+                leading-6
+              "
+            >
               {successMessage}
             </p>
 
-            <p className="
-              text-xs
-              text-[#b18442]
-              mt-5
-            ">
+            <p
+              className="
+                text-xs
+                text-[#b18442]
+                mt-5
+              "
+            >
               Redirecting to Home...
             </p>
 

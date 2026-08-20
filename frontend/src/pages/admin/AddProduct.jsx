@@ -1,9 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-import { ArrowLeft, Plus, X, Package, Save, ImagePlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  X,
+  Package,
+  Save,
+  ImagePlus,
+} from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
 const AddProduct = () => {
   const navigate = useNavigate();
 
@@ -94,7 +103,11 @@ const AddProduct = () => {
     });
 
     if (invalidFiles.length > 0) {
-      setMessage(`${invalidFiles.join(", ")}. Maximum image size is 5MB.`);
+      setMessage(
+        `${invalidFiles.join(
+          ", "
+        )}. Maximum image size is 5MB.`
+      );
     } else {
       setMessage("");
     }
@@ -122,18 +135,14 @@ const AddProduct = () => {
   };
 
   // =====================================================
-  // IMAGE PREVIEW URL CLEANUP
+  // IMAGE PREVIEW
   // =====================================================
 
-  useEffect(() => {
-    return () => {
-      formData.images.forEach((file) => {
-        if (file instanceof File) {
-          URL.revokeObjectURL(URL.createObjectURL(file));
-        }
-      });
-    };
-  }, [formData.images]);
+  const getPreviewUrl = (file) => {
+    if (!(file instanceof File)) return "";
+
+    return URL.createObjectURL(file);
+  };
 
   // =====================================================
   // ADD SIZE
@@ -225,12 +234,16 @@ const AddProduct = () => {
     }
 
     if (!formData.category) {
-      setMessage("Please select where this product should appear.");
+      setMessage(
+        "Please select where this product should appear."
+      );
       return;
     }
 
     if (formData.images.length === 0) {
-      setMessage("Please select at least one product image.");
+      setMessage(
+        "Please select at least one product image."
+      );
       return;
     }
 
@@ -238,45 +251,92 @@ const AddProduct = () => {
       setLoading(true);
 
       // =================================================
+      // ADMIN TOKEN
+      // =================================================
+
+      const token = localStorage.getItem(
+        "adeeka_admin_token"
+      );
+
+      if (!token) {
+        setMessage(
+          "Admin session expired. Please login again."
+        );
+
+        navigate("/admin/login");
+        return;
+      }
+
+      // =================================================
       // FORM DATA
       // =================================================
 
       const data = new FormData();
 
-      data.append("name", formData.name.trim());
+      data.append(
+        "name",
+        formData.name.trim()
+      );
 
       /*
-        Slug ke end mein small unique number.
-        Isse same product name ki wajah se
-        duplicate slug error kam hoga.
+        Unique slug
       */
 
-      const uniqueSlug = `${generateSlug(formData.name)}-${Date.now()}`;
+      const uniqueSlug = `${generateSlug(
+        formData.name
+      )}-${Date.now()}`;
 
       data.append("slug", uniqueSlug);
 
-      data.append("price", formData.price);
+      data.append(
+        "price",
+        formData.price
+      );
 
-      // IMPORTANT:
-      // pret / luxury / sale / unstitched yahan jayega
-      data.append("category", formData.category);
+      data.append(
+        "category",
+        formData.category
+      );
 
-      // Collection ka naam
-      data.append("collectionName", formData.collectionName.trim());
+      data.append(
+        "collectionName",
+        formData.collectionName.trim()
+      );
 
-      data.append("description", formData.description.trim());
+      data.append(
+        "description",
+        formData.description.trim()
+      );
 
-      data.append("stock", formData.stock || "0");
+      data.append(
+        "stock",
+        formData.stock || "0"
+      );
 
-      data.append("sizes", JSON.stringify(formData.sizes));
+      data.append(
+        "sizes",
+        JSON.stringify(formData.sizes)
+      );
 
-      data.append("colors", JSON.stringify(formData.colors));
+      data.append(
+        "colors",
+        JSON.stringify(formData.colors)
+      );
 
-      data.append("isNewArrival", String(formData.isNewArrival));
+      data.append(
+        "isNewArrival",
+        String(formData.isNewArrival)
+      );
 
-      data.append("isBestSeller", String(formData.isBestSeller));
+      data.append(
+        "isBestSeller",
+        String(formData.isBestSeller)
+      );
 
-      data.append("isSale", String(formData.isSale));
+      data.append(
+        "isSale",
+        String(formData.isSale)
+      );
 
       // =================================================
       // IMAGES
@@ -289,25 +349,54 @@ const AddProduct = () => {
       // =================================================
       // API REQUEST
       // =================================================
+      /*
+        IMPORTANT:
 
-      const response = await fetch(`${API_URL}/api/products`, {
-        method: "POST",
-        body: data,
-      });
+        .env:
+        VITE_API_URL=http://localhost:5000/api
+
+        Is liye yahan /api dobara nahi lagana.
+      */
+
+      const response = await fetch(
+        `${API_URL}/products`,
+        {
+          method: "POST",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+
+          body: data,
+        }
+      );
 
       const result = await response.json();
 
-      console.log("ADD PRODUCT RESPONSE:", result);
+      console.log(
+        "ADD PRODUCT STATUS:",
+        response.status
+      );
+
+      console.log(
+        "ADD PRODUCT RESPONSE:",
+        result
+      );
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to add product");
+        throw new Error(
+          result.message ||
+            "Failed to add product"
+        );
       }
 
       // =================================================
       // SUCCESS
       // =================================================
 
-      setMessage("Product added successfully! Image bhi upload ho gayi.");
+      setMessage(
+        "Product added successfully! Image bhi upload ho gayi."
+      );
 
       // =================================================
       // RESET FORM
@@ -340,9 +429,15 @@ const AddProduct = () => {
         navigate("/admin/dashboard");
       }, 1200);
     } catch (error) {
-      console.error("Add Product Error:", error);
+      console.error(
+        "Add Product Error:",
+        error
+      );
 
-      setMessage(error.message || "Something went wrong.");
+      setMessage(
+        error.message ||
+          "Something went wrong."
+      );
     } finally {
       setLoading(false);
     }
@@ -354,32 +449,40 @@ const AddProduct = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f3ed]">
+
       {/* HEADER */}
 
       <div className="bg-white border-b border-[#e5ddd2]">
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-5">
+
           <Link
             to="/admin/dashboard"
             className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#75695e] hover:text-[#b18442]"
           >
             <ArrowLeft size={16} />
+
             Back to Dashboard
           </Link>
+
         </div>
       </div>
 
       {/* CONTENT */}
 
       <main className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-10">
+
         {/* TITLE */}
 
         <div className="mb-8">
+
           <div className="flex items-center gap-2 mb-2">
+
             <span className="w-7 h-[1px] bg-[#b18442]" />
 
             <p className="text-[10px] uppercase tracking-[3px] text-[#b18442]">
               Product Management
             </p>
+
           </div>
 
           <h1 className="font-serif text-3xl md:text-4xl text-[#17110d]">
@@ -389,6 +492,7 @@ const AddProduct = () => {
           <p className="text-sm text-[#75695e] mt-2">
             Add a new product to your Adeeka Fabrics store.
           </p>
+
         </div>
 
         {/* MESSAGE */}
@@ -408,16 +512,26 @@ const AddProduct = () => {
         {/* FORM */}
 
         <form onSubmit={handleSubmit}>
+
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
             {/* PRODUCT INFORMATION */}
 
             <div className="xl:col-span-2 bg-white border border-[#e5ddd2] p-6 md:p-8">
+
               <div className="flex items-center gap-3 mb-7">
+
                 <div className="w-10 h-10 bg-[#f5eee4] flex items-center justify-center">
-                  <Package size={19} className="text-[#b18442]" />
+
+                  <Package
+                    size={19}
+                    className="text-[#b18442]"
+                  />
+
                 </div>
 
                 <div>
+
                   <h2 className="font-serif text-xl text-[#17110d]">
                     Product Information
                   </h2>
@@ -425,14 +539,20 @@ const AddProduct = () => {
                   <p className="text-xs text-[#75695e]">
                     Basic details about your product
                   </p>
+
                 </div>
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
                 {/* NAME */}
 
                 <div className="md:col-span-2">
-                  <label className="label">Product Name *</label>
+
+                  <label className="label">
+                    Product Name *
+                  </label>
 
                   <input
                     type="text"
@@ -441,12 +561,16 @@ const AddProduct = () => {
                     placeholder="e.g. Embroidered Lawn Suit"
                     className="input"
                   />
+
                 </div>
 
                 {/* SLUG */}
 
                 <div>
-                  <label className="label">Slug</label>
+
+                  <label className="label">
+                    Slug
+                  </label>
 
                   <input
                     type="text"
@@ -454,12 +578,16 @@ const AddProduct = () => {
                     readOnly
                     className="input bg-[#faf8f4] text-[#75695e]"
                   />
+
                 </div>
 
                 {/* PRICE */}
 
                 <div>
-                  <label className="label">Price (Rs.) *</label>
+
+                  <label className="label">
+                    Price (Rs.) *
+                  </label>
 
                   <input
                     type="number"
@@ -470,12 +598,16 @@ const AddProduct = () => {
                     min="0"
                     className="input"
                   />
+
                 </div>
 
                 {/* CATEGORY */}
 
                 <div>
-                  <label className="label">Store Category *</label>
+
+                  <label className="label">
+                    Store Category *
+                  </label>
 
                   <select
                     name="category"
@@ -483,27 +615,50 @@ const AddProduct = () => {
                     onChange={handleChange}
                     className="input"
                   >
-                    <option value="">Select where product should appear</option>
 
-                    <option value="formal">Formal</option>
+                    <option value="">
+                      Select where product should appear
+                    </option>
 
-                    <option value="casual">Casual</option>
-                    <option value="new-arrival">New Arrival</option>
+                    <option value="formal">
+                      Formal
+                    </option>
 
-                    <option value="unstitched">Unstitched</option>
+                    <option value="casual">
+                      Casual
+                    </option>
 
-                    <option value="pret">Pret</option>
+                    <option value="new-arrival">
+                      New Arrival
+                    </option>
 
-                    <option value="luxury">Luxury</option>
+                    <option value="unstitched">
+                      Unstitched
+                    </option>
 
-                    <option value="sale">Sale</option>
+                    <option value="pret">
+                      Pret
+                    </option>
+
+                    <option value="luxury">
+                      Luxury
+                    </option>
+
+                    <option value="sale">
+                      Sale
+                    </option>
+
                   </select>
+
                 </div>
 
                 {/* COLLECTION */}
 
                 <div>
-                  <label className="label">Collection</label>
+
+                  <label className="label">
+                    Collection
+                  </label>
 
                   <input
                     type="text"
@@ -513,12 +668,16 @@ const AddProduct = () => {
                     placeholder="e.g. Lawn Collection"
                     className="input"
                   />
+
                 </div>
 
                 {/* STOCK */}
 
                 <div>
-                  <label className="label">Stock</label>
+
+                  <label className="label">
+                    Stock
+                  </label>
 
                   <input
                     type="number"
@@ -529,12 +688,16 @@ const AddProduct = () => {
                     min="0"
                     className="input"
                   />
+
                 </div>
 
                 {/* DESCRIPTION */}
 
                 <div className="md:col-span-2">
-                  <label className="label">Description</label>
+
+                  <label className="label">
+                    Description
+                  </label>
 
                   <textarea
                     name="description"
@@ -544,13 +707,17 @@ const AddProduct = () => {
                     placeholder="Write product description..."
                     className="input resize-none"
                   />
+
                 </div>
+
               </div>
+
             </div>
 
             {/* STATUS */}
 
             <div className="bg-white border border-[#e5ddd2] p-6 md:p-8 h-fit">
+
               <p className="text-[10px] uppercase tracking-[2px] text-[#b18442]">
                 Product Status
               </p>
@@ -560,7 +727,11 @@ const AddProduct = () => {
               </h2>
 
               <div className="space-y-4">
+
+                {/* NEW ARRIVAL */}
+
                 <label className="option">
+
                   <input
                     type="checkbox"
                     name="isNewArrival"
@@ -569,6 +740,7 @@ const AddProduct = () => {
                   />
 
                   <div>
+
                     <p className="text-sm font-medium text-[#17110d]">
                       New Arrival
                     </p>
@@ -576,10 +748,15 @@ const AddProduct = () => {
                     <p className="text-[11px] text-[#75695e]">
                       Show in New Arrivals
                     </p>
+
                   </div>
+
                 </label>
 
+                {/* BEST SELLER */}
+
                 <label className="option">
+
                   <input
                     type="checkbox"
                     name="isBestSeller"
@@ -588,6 +765,7 @@ const AddProduct = () => {
                   />
 
                   <div>
+
                     <p className="text-sm font-medium text-[#17110d]">
                       Best Seller
                     </p>
@@ -595,10 +773,15 @@ const AddProduct = () => {
                     <p className="text-[11px] text-[#75695e]">
                       Mark as best seller
                     </p>
+
                   </div>
+
                 </label>
 
+                {/* SALE */}
+
                 <label className="option">
+
                   <input
                     type="checkbox"
                     name="isSale"
@@ -607,6 +790,7 @@ const AddProduct = () => {
                   />
 
                   <div>
+
                     <p className="text-sm font-medium text-[#17110d]">
                       On Sale
                     </p>
@@ -614,14 +798,19 @@ const AddProduct = () => {
                     <p className="text-[11px] text-[#75695e]">
                       Show as sale product
                     </p>
+
                   </div>
+
                 </label>
+
               </div>
+
             </div>
 
             {/* IMAGES */}
 
             <div className="xl:col-span-2 bg-white border border-[#e5ddd2] p-6 md:p-8">
+
               <p className="text-[10px] uppercase tracking-[2px] text-[#b18442]">
                 Product Media
               </p>
@@ -638,7 +827,11 @@ const AddProduct = () => {
                 htmlFor="product-images"
                 className="border-2 border-dashed border-[#e5ddd2] hover:border-[#b18442] bg-[#faf8f4] min-h-[170px] flex flex-col items-center justify-center cursor-pointer transition"
               >
-                <ImagePlus size={38} className="text-[#b18442] mb-3" />
+
+                <ImagePlus
+                  size={38}
+                  className="text-[#b18442] mb-3"
+                />
 
                 <p className="text-sm text-[#17110d]">
                   Click to select product images
@@ -647,6 +840,7 @@ const AddProduct = () => {
                 <p className="text-xs text-[#75695e] mt-1">
                   JPG, PNG, WEBP • Maximum 5MB each
                 </p>
+
               </label>
 
               <input
@@ -661,38 +855,56 @@ const AddProduct = () => {
               {/* PREVIEW */}
 
               {formData.images.length > 0 && (
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                  {formData.images.map((file, index) => {
-                    const previewURL = URL.createObjectURL(file);
 
-                    return (
-                      <div
-                        key={`${file.name}-${index}`}
-                        className="relative border border-[#e5ddd2] aspect-square overflow-hidden"
-                      >
-                        <img
-                          src={previewURL}
-                          alt={`Product ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+                  {formData.images.map(
+                    (file, index) => {
 
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-2 right-2 w-8 h-8 bg-white flex items-center justify-center shadow hover:bg-red-50"
+                      const previewURL =
+                        getPreviewUrl(file);
+
+                      return (
+
+                        <div
+                          key={`${file.name}-${index}`}
+                          className="relative border border-[#e5ddd2] aspect-square overflow-hidden"
                         >
-                          <X size={15} />
-                        </button>
-                      </div>
-                    );
-                  })}
+
+                          <img
+                            src={previewURL}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeImage(index)
+                            }
+                            className="absolute top-2 right-2 w-8 h-8 bg-white flex items-center justify-center shadow hover:bg-red-50"
+                          >
+
+                            <X size={15} />
+
+                          </button>
+
+                        </div>
+
+                      );
+                    }
+                  )}
+
                 </div>
+
               )}
+
             </div>
 
             {/* SIZES & COLORS */}
 
             <div className="bg-white border border-[#e5ddd2] p-6 md:p-8">
+
               <p className="text-[10px] uppercase tracking-[2px] text-[#b18442]">
                 Variants
               </p>
@@ -703,20 +915,30 @@ const AddProduct = () => {
 
               {/* SIZES */}
 
-              <label className="label">Sizes</label>
+              <label className="label">
+                Sizes
+              </label>
 
               <div className="flex gap-2 mb-3">
+
                 <input
                   type="text"
                   value={sizeInput}
-                  onChange={(e) => setSizeInput(e.target.value)}
+                  onChange={(e) =>
+                    setSizeInput(e.target.value)
+                  }
                   placeholder="e.g. Medium"
                   className="input flex-1"
                   onKeyDown={(e) => {
+
                     if (e.key === "Enter") {
+
                       e.preventDefault();
+
                       addSize();
+
                     }
+
                   }}
                 />
 
@@ -725,41 +947,69 @@ const AddProduct = () => {
                   onClick={addSize}
                   className="px-4 bg-[#f5eee4] text-[#b18442]"
                 >
+
                   <Plus size={17} />
+
                 </button>
+
               </div>
 
               <div className="flex flex-wrap gap-2 mb-7">
-                {formData.sizes.map((size) => (
-                  <span
-                    key={size}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-[#f5eee4] text-xs"
-                  >
-                    {size}
 
-                    <button type="button" onClick={() => removeSize(size)}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+                {formData.sizes.map(
+                  (size) => (
+
+                    <span
+                      key={size}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-[#f5eee4] text-xs"
+                    >
+
+                      {size}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeSize(size)
+                        }
+                      >
+
+                        <X size={12} />
+
+                      </button>
+
+                    </span>
+
+                  )
+                )}
+
               </div>
 
               {/* COLORS */}
 
-              <label className="label">Colors</label>
+              <label className="label">
+                Colors
+              </label>
 
               <div className="flex gap-2 mb-3">
+
                 <input
                   type="text"
                   value={colorInput}
-                  onChange={(e) => setColorInput(e.target.value)}
+                  onChange={(e) =>
+                    setColorInput(e.target.value)
+                  }
                   placeholder="e.g. Beige"
                   className="input flex-1"
                   onKeyDown={(e) => {
+
                     if (e.key === "Enter") {
+
                       e.preventDefault();
+
                       addColor();
+
                     }
+
                   }}
                 />
 
@@ -768,30 +1018,51 @@ const AddProduct = () => {
                   onClick={addColor}
                   className="px-4 bg-[#f5eee4] text-[#b18442]"
                 >
+
                   <Plus size={17} />
+
                 </button>
+
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {formData.colors.map((color) => (
-                  <span
-                    key={color}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-[#f5eee4] text-xs"
-                  >
-                    {color}
 
-                    <button type="button" onClick={() => removeColor(color)}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+                {formData.colors.map(
+                  (color) => (
+
+                    <span
+                      key={color}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-[#f5eee4] text-xs"
+                    >
+
+                      {color}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeColor(color)
+                        }
+                      >
+
+                        <X size={12} />
+
+                      </button>
+
+                    </span>
+
+                  )
+                )}
+
               </div>
+
             </div>
+
           </div>
 
           {/* SAVE */}
 
           <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+
             <Link
               to="/admin/dashboard"
               className="px-6 py-3 border border-[#e5ddd2] bg-white text-xs uppercase tracking-widest text-[#75695e] text-center"
@@ -804,12 +1075,19 @@ const AddProduct = () => {
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#17110d] text-white text-xs uppercase tracking-widest hover:bg-[#b18442] transition disabled:opacity-50"
             >
+
               <Save size={17} />
 
-              {loading ? "Uploading..." : "Save Product"}
+              {loading
+                ? "Uploading..."
+                : "Save Product"}
+
             </button>
+
           </div>
+
         </form>
+
       </main>
 
       {/* STYLES */}
@@ -865,6 +1143,7 @@ const AddProduct = () => {
         }
 
       `}</style>
+
     </div>
   );
 };

@@ -1,5 +1,11 @@
-import { Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import {
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+
+import { useEffect, useState } from "react";
 
 // ================= COMPONENTS =================
 
@@ -35,7 +41,6 @@ import CasualPage from "./pages/CasualPage.jsx";
 import LawnCollection from "./pages/LawnCollection.jsx";
 import ChiffonCollection from "./pages/ChiffonCollection.jsx";
 import SilkCollection from "./pages/SilkCollection.jsx";
-import FormalCollection from "./pages/FormalPage.jsx";
 
 // ================= PRODUCT =================
 
@@ -65,41 +70,197 @@ import BestSellersPage from "./pages/BestSellersPage.jsx";
 
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
+
 // =====================================================
-// CHECK LOGIN
+// USER LOGIN CHECK
 // =====================================================
 
-const isLoggedIn = () => {
-  return localStorage.getItem("adeeka_user") !== null;
+const isUserLoggedIn = () => {
+  const sessionUser =
+    sessionStorage.getItem("adeeka_user");
+
+  const localUser =
+    localStorage.getItem("adeeka_user");
+
+  return Boolean(
+    sessionUser || localUser
+  );
 };
 
+
 // =====================================================
-// PROTECTED ROUTE
+// ADMIN LOGIN CHECK
+// =====================================================
+
+const isAdminLoggedIn = () => {
+
+  const token =
+    localStorage.getItem("adeeka_admin_token");
+
+  const admin =
+    localStorage.getItem("adeeka_admin");
+
+  return Boolean(
+    token &&
+    admin
+  );
+};
+
+
+// =====================================================
+// USER PROTECTED ROUTE
 // =====================================================
 
 const ProtectedRoute = ({ children }) => {
-  if (!isLoggedIn()) {
-    return <Navigate to="/login" replace />;
+
+  if (!isUserLoggedIn()) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
   return children;
 };
+
+
+// =====================================================
+// ADMIN PROTECTED ROUTE
+// =====================================================
+
+const AdminProtectedRoute = ({ children }) => {
+
+  const location = useLocation();
+
+  const adminLoggedIn =
+    isAdminLoggedIn();
+
+  console.log(
+    "ADMIN TOKEN:",
+    localStorage.getItem(
+      "adeeka_admin_token"
+    )
+  );
+
+  console.log(
+    "ADMIN DATA:",
+    localStorage.getItem(
+      "adeeka_admin"
+    )
+  );
+
+  // ================================================
+  // ADMIN LOGIN NAHI HAI
+  // ================================================
+
+  if (!adminLoggedIn) {
+
+    return (
+      <Navigate
+        to="/admin/login"
+        replace
+        state={{
+          from: location,
+        }}
+      />
+    );
+  }
+
+  // ================================================
+  // ADMIN LOGIN HAI
+  // ================================================
+
+  return children;
+};
+
 
 // =====================================================
 // APP
 // =====================================================
 
 function App() {
-  const location = useLocation();
 
-  // Har page change par top par scroll
+  const location =
+    useLocation();
+
+  const [
+    loggedIn,
+    setLoggedIn,
+  ] = useState(
+    isUserLoggedIn()
+  );
+
+
+  // ===================================================
+  // USER AUTH LISTENER
+  // ===================================================
+
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+
+    const checkAuth = () => {
+
+      setLoggedIn(
+        isUserLoggedIn()
+      );
+
+    };
+
+    window.addEventListener(
+      "adeeka-auth-change",
+      checkAuth
+    );
+
+    window.addEventListener(
+      "storage",
+      checkAuth
+    );
+
+    checkAuth();
+
+    return () => {
+
+      window.removeEventListener(
+        "adeeka-auth-change",
+        checkAuth
+      );
+
+      window.removeEventListener(
+        "storage",
+        checkAuth
+      );
+
+    };
+
+  }, []);
+
+
+  // ===================================================
+  // SCROLL TOP
+  // ===================================================
+
+  useEffect(() => {
+
+    window.scrollTo(
+      0,
+      0
+    );
+
+  }, [
+    location.pathname,
+  ]);
+
+
+  // ===================================================
+  // RETURN
+  // ===================================================
 
   return (
+
     <div className="min-h-screen flex flex-col">
-      {/* ================= GLOBAL COMPONENTS ================= */}
+
+      {/* GLOBAL */}
 
       <Preloader />
 
@@ -109,31 +270,33 @@ function App() {
 
       <Marquee />
 
-      {/* ================= MAIN ================= */}
 
       <main className="flex-1">
+
         <Routes>
-          {/* ================================================= */}
-          {/* HOME - NO LOGIN REQUIRED */}
-          {/* ================================================= */}
 
-          <Route path="/" element={<Home />} />
+          {/* ================= HOME ================= */}
 
-          {/* ================================================= */}
-          {/* LOGIN - NO LOGIN REQUIRED */}
-          {/* ================================================= */}
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-          <Route path="/login" element={<LoginPage />} />
 
-          {/* ================================================= */}
-          {/* REGISTER - NO LOGIN REQUIRED */}
-          {/* ================================================= */}
+          {/* ================= USER AUTH ================= */}
 
-          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/login"
+            element={<LoginPage />}
+          />
 
-          {/* ================================================= */}
-          {/* NEW ARRIVALS - LOGIN REQUIRED */}
-          {/* ================================================= */}
+          <Route
+            path="/register"
+            element={<RegisterPage />}
+          />
+
+
+          {/* ================= USER PAGES ================= */}
 
           <Route
             path="/new-arrivals"
@@ -144,10 +307,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* PRET - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/pret"
             element={
@@ -156,10 +315,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* LUXURY - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/luxury"
@@ -170,10 +325,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* SALE - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/sale"
             element={
@@ -182,10 +333,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* FORMAL - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/formal"
@@ -196,10 +343,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* CASUAL - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/casual"
             element={
@@ -208,10 +351,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* BEST SELLERS - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/best-sellers"
@@ -222,10 +361,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* SHOP CATEGORY - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/shop/:category"
             element={
@@ -234,10 +369,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* COLLECTIONS MAIN - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/collections"
@@ -248,10 +379,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* LAWN COLLECTION - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/collections/lawn"
             element={
@@ -260,10 +387,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* CHIFFON COLLECTION - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/collections/chiffon"
@@ -274,10 +397,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* SILK COLLECTION - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/collections/silk"
             element={
@@ -286,23 +405,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* FORMAL COLLECTION - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
-          <Route
-            path="/collections/formal"
-            element={
-              <ProtectedRoute>
-                <FormalCollection />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ================================================= */}
-          {/* WISHLIST - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/wishlist"
@@ -313,10 +415,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* CHECKOUT - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/checkout"
             element={
@@ -325,10 +423,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* PROFILE - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/profile"
@@ -339,10 +433,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* ORDERS - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/orders"
             element={
@@ -351,10 +441,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* ABOUT - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/about"
@@ -365,10 +451,6 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* ABOUT DETAILS - LOGIN REQUIRED */}
-          {/* ================================================= */}
-
           <Route
             path="/about/details"
             element={
@@ -377,10 +459,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ================================================= */}
-          {/* PRODUCT DETAILS - LOGIN REQUIRED */}
-          {/* ================================================= */}
 
           <Route
             path="/product-details/:id"
@@ -391,55 +469,111 @@ function App() {
             }
           />
 
-          {/* ================================================= */}
-          {/* ADMIN LOGIN */}
-          {/* ================================================= */}
-
-          <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* ================================================= */}
-          {/* ADMIN DASHBOARD */}
+          {/* ADMIN LOGIN - PUBLIC */}
           {/* ================================================= */}
 
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route
+            path="/admin/login"
+            element={
+              <AdminLogin />
+            }
+          />
+
 
           {/* ================================================= */}
-          {/* ADMIN ADD PRODUCT */}
+          {/* ADMIN DASHBOARD - PROTECTED */}
           {/* ================================================= */}
 
-          <Route path="/admin/add-product" element={<AddProduct />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminProtectedRoute>
+                <AdminDashboard />
+              </AdminProtectedRoute>
+            }
+          />
+
 
           {/* ================================================= */}
-          {/* ADMIN MANAGE PRODUCTS */}
+          {/* ADMIN ADD PRODUCT - PROTECTED */}
           {/* ================================================= */}
 
-          <Route path="/admin/products" element={<ManageProducts />} />
+          <Route
+            path="/admin/add-product"
+            element={
+              <AdminProtectedRoute>
+                <AddProduct />
+              </AdminProtectedRoute>
+            }
+          />
+
+
           {/* ================================================= */}
-          {/* ADMIN USERS / CUSTOMERS */}
+          {/* ADMIN PRODUCTS - PROTECTED */}
           {/* ================================================= */}
 
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/orders" element={<ManageOrders />} />
+          <Route
+            path="/admin/products"
+            element={
+              <AdminProtectedRoute>
+                <ManageProducts />
+              </AdminProtectedRoute>
+            }
+          />
+
 
           {/* ================================================= */}
-          {/* WRONG URL */}
+          {/* ADMIN USERS - PROTECTED */}
           {/* ================================================= */}
 
-          <Route path="*" element={<NotFoundPage />} />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminProtectedRoute>
+                <AdminUsers />
+              </AdminProtectedRoute>
+            }
+          />
+
+
+          {/* ================================================= */}
+          {/* ADMIN ORDERS - PROTECTED */}
+          {/* ================================================= */}
+
+          <Route
+            path="/admin/orders"
+            element={
+              <AdminProtectedRoute>
+                <ManageOrders />
+              </AdminProtectedRoute>
+            }
+          />
+
+
+          {/* ================= NOT FOUND ================= */}
+
+          <Route
+            path="*"
+            element={
+              <NotFoundPage />
+            }
+          />
+
         </Routes>
+
       </main>
+
 
       {/* ================= FOOTER ================= */}
 
       <Footer />
 
-      {/* ================= CART DRAWER ================= */}
-
       <CartDrawer />
 
-      {/* ================= TOAST ================= */}
-
       <Toast />
+
     </div>
   );
 }

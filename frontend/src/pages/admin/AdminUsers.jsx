@@ -10,9 +10,11 @@ import {
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // =====================================================
   // FETCH USERS
@@ -21,21 +23,31 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setErrorMessage("");
 
-      const token = localStorage.getItem(
-        "adeeka_admin_token"
-      );
+      const token = localStorage.getItem("adeeka_admin_token");
+
+      // IMPORTANT:
+      // VITE_API_URL already contains /api
+      // Example:
+      // http://localhost:5000/api
+      //
+      // So don't write /api again here.
 
       const response = await fetch(
-        `${API_URL}/api/admin/users`,
+        `${API_URL}/admin/users`,
         {
+          method: "GET",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
       const data = await response.json();
+
+      console.log("USERS API RESPONSE:", data);
 
       if (!response.ok) {
         throw new Error(
@@ -50,10 +62,20 @@ const AdminUsers = () => {
       setUsers(userList);
     } catch (error) {
       console.error("Users fetch error:", error);
+
+      setErrorMessage(
+        error.message || "Unable to load customers"
+      );
+
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // =====================================================
+  // LOAD USERS
+  // =====================================================
 
   useEffect(() => {
     fetchUsers();
@@ -66,14 +88,17 @@ const AdminUsers = () => {
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString(
-      "en-PK",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "-";
+    }
+
+    return parsedDate.toLocaleDateString("en-PK", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   // =====================================================
@@ -115,6 +140,7 @@ const AdminUsers = () => {
 
           <button
             onClick={fetchUsers}
+            disabled={loading}
             className="
               inline-flex
               items-center
@@ -130,16 +156,13 @@ const AdminUsers = () => {
               hover:bg-[#b18442]
               transition
               w-fit
+              disabled:opacity-50
             "
           >
 
             <RefreshCw
               size={16}
-              className={
-                loading
-                  ? "animate-spin"
-                  : ""
-              }
+              className={loading ? "animate-spin" : ""}
             />
 
             Refresh
@@ -147,6 +170,31 @@ const AdminUsers = () => {
           </button>
 
         </div>
+
+        {/* ================================================= */}
+        {/* ERROR */}
+        {/* ================================================= */}
+
+        {errorMessage && !loading && (
+          <div className="
+            mb-6
+            bg-red-50
+            border
+            border-red-200
+            px-5
+            py-4
+            text-sm
+            text-red-700
+          ">
+            <p className="font-medium">
+              Unable to load customers
+            </p>
+
+            <p className="text-xs mt-1">
+              {errorMessage}
+            </p>
+          </div>
+        )}
 
         {/* ================================================= */}
         {/* USER COUNT */}
@@ -292,6 +340,31 @@ const AdminUsers = () => {
               Registered customers will appear here.
             </p>
 
+            <button
+              onClick={fetchUsers}
+              className="
+                inline-flex
+                items-center
+                gap-2
+                mt-6
+                bg-[#17110d]
+                text-white
+                px-5
+                py-3
+                text-xs
+                uppercase
+                tracking-widest
+                hover:bg-[#b18442]
+                transition
+              "
+            >
+
+              <RefreshCw size={15} />
+
+              Try Again
+
+            </button>
+
           </div>
 
         ) : (
@@ -379,8 +452,7 @@ const AdminUsers = () => {
                             </p>
 
                             <p className="text-[10px] text-[#a0968b] mt-1">
-                              ID:{" "}
-                              {user._id?.slice(-8)}
+                              ID: {user._id?.slice(-8)}
                             </p>
 
                           </div>
@@ -421,9 +493,7 @@ const AdminUsers = () => {
 
                           <CalendarDays size={15} />
 
-                          {formatDate(
-                            user.createdAt
-                          )}
+                          {formatDate(user.createdAt)}
 
                         </div>
 

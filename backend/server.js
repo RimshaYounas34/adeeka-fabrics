@@ -1,8 +1,8 @@
+
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import connectDB from "./config/db.js";
 
@@ -13,16 +13,7 @@ import userRoutes from "./routes/users.js";
 import newsletterRoutes from "./routes/newsletter.js";
 import adminRoutes from "./routes/admin.js";
 
-dotenv.config();
-
 const app = express();
-
-// =====================================================
-// PATH
-// =====================================================
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // =====================================================
 // MIDDLEWARE
@@ -31,15 +22,11 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// =====================================================
-// STATIC UPLOADS
-// =====================================================
 
 app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
+  express.urlencoded({
+    extended: true,
+  })
 );
 
 // =====================================================
@@ -49,7 +36,8 @@ app.use(
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Adeeka Fabrics API is running...",
+    message:
+      "Adeeka Fabrics API is running...",
   });
 });
 
@@ -57,12 +45,35 @@ app.get("/", (req, res) => {
 // ROUTES
 // =====================================================
 
-app.use("/api/products", productRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/newsletter", newsletterRoutes);
-app.use("/api/admin", adminRoutes);
+app.use(
+  "/api/products",
+  productRoutes
+);
+
+app.use(
+  "/api/auth",
+  authRoutes
+);
+
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+app.use(
+  "/api/users",
+  userRoutes
+);
+
+app.use(
+  "/api/newsletter",
+  newsletterRoutes
+);
+
+app.use(
+  "/api/admin",
+  adminRoutes
+);
 
 // =====================================================
 // 404
@@ -79,14 +90,21 @@ app.use((req, res) => {
 // ERROR HANDLER
 // =====================================================
 
-app.use((error, req, res, next) => {
-  console.error("Server Error:", error);
+app.use(
+  (error, req, res, next) => {
+    console.error(
+      "Server Error:",
+      error
+    );
 
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
-});
+    res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Internal server error",
+    });
+  }
+);
 
 // =====================================================
 // DATABASE
@@ -95,7 +113,16 @@ app.use((error, req, res, next) => {
 connectDB();
 
 // =====================================================
-// VERCEL
+// SERVER
 // =====================================================
+
+const PORT =
+  process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(
+    `Server running on http://localhost:${PORT}`
+  );
+});
 
 export default app;

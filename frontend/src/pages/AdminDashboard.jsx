@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -19,13 +20,25 @@ import {
 
 import logo from "../assets/images/adeeka-logo.png";
 
+// =====================================================
+// BACKEND API
+// =====================================================
+
+const API_URL = "http://localhost:5000";
+
+// =====================================================
+// ADMIN DASHBOARD
+// =====================================================
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [admin, setAdmin] = useState(null);
 
-  // ================= DASHBOARD DATA =================
+  // =====================================================
+  // DASHBOARD DATA
+  // =====================================================
 
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -39,72 +52,184 @@ const AdminDashboard = () => {
 
   const [loading, setLoading] = useState(true);
 
-  // ================= CHECK ADMIN LOGIN =================
+  // =====================================================
+  // CHECK ADMIN LOGIN
+  // =====================================================
 
   useEffect(() => {
     const token = localStorage.getItem("adeeka_admin_token");
     const adminData = localStorage.getItem("adeeka_admin");
+
+    console.log("=================================");
+    console.log("ADMIN LOGIN CHECK");
+    console.log("Token:", token);
+    console.log("Admin:", adminData);
+    console.log("=================================");
 
     if (!token || !adminData) {
       navigate("/admin/login");
       return;
     }
 
-    setAdmin(JSON.parse(adminData));
+    try {
+      setAdmin(JSON.parse(adminData));
+    } catch (error) {
+      console.log("Admin data parse error:", error);
+
+      localStorage.removeItem("adeeka_admin");
+      localStorage.removeItem("adeeka_admin_token");
+
+      navigate("/admin/login");
+      return;
+    }
 
     fetchDashboardData(token);
   }, [navigate]);
 
-  // ================= FETCH DASHBOARD DATA =================
+  // =====================================================
+  // FETCH DASHBOARD DATA
+  // =====================================================
 
   const fetchDashboardData = async (token) => {
     try {
       setLoading(true);
 
+      const dashboardURL =
+        `${API_URL}/api/admin/dashboard`;
+
+      console.log("=================================");
+      console.log("FETCHING ADMIN DASHBOARD");
+      console.log("URL:", dashboardURL);
+      console.log("=================================");
+
       const response = await fetch(
-        "http://localhost:5000/api/admin/dashboard",
+        dashboardURL,
         {
+          method: "GET",
+
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
       const data = await response.json();
 
+      console.log("=================================");
+      console.log("DASHBOARD RESPONSE");
+      console.log("Status:", response.status);
+      console.log("Data:", data);
+      console.log("=================================");
+
+      // =================================================
+      // ERROR
+      // =================================================
+
       if (!response.ok) {
-        console.log("Dashboard error:", data);
+        console.log(
+          "Dashboard API Error:",
+          data
+        );
+
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          localStorage.removeItem(
+            "adeeka_admin_token"
+          );
+
+          localStorage.removeItem(
+            "adeeka_admin"
+          );
+
+          navigate("/admin/login");
+        }
+
         return;
       }
 
-      setStats(
-        data.stats || {
-          totalProducts: 0,
-          totalOrders: 0,
-          totalCustomers: 0,
-          totalSales: 0,
-        }
+      // =================================================
+      // STATS
+      // =================================================
+
+      setStats({
+        totalProducts: Number(
+          data?.stats?.totalProducts || 0
+        ),
+
+        totalOrders: Number(
+          data?.stats?.totalOrders || 0
+        ),
+
+        totalCustomers: Number(
+          data?.stats?.totalCustomers || 0
+        ),
+
+        totalSales: Number(
+          data?.stats?.totalSales || 0
+        ),
+      });
+
+      // =================================================
+      // MONTHLY SALES
+      // =================================================
+
+      setMonthlySales(
+        Array.isArray(data?.monthlySales)
+          ? data.monthlySales
+          : []
       );
 
-      setMonthlySales(data.monthlySales || []);
-      setRecentOrders(data.recentOrders || []);
+      // =================================================
+      // RECENT ORDERS
+      // =================================================
+
+      setRecentOrders(
+        Array.isArray(data?.recentOrders)
+          ? data.recentOrders
+          : []
+      );
+
     } catch (error) {
-      console.log("Dashboard connection error:", error);
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "DASHBOARD CONNECTION ERROR"
+      );
+
+      console.log(error);
+
+      console.log(
+        "================================="
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= LOGOUT =================
+  // =====================================================
+  // LOGOUT
+  // =====================================================
 
   const handleLogout = () => {
-    localStorage.removeItem("adeeka_admin_token");
-    localStorage.removeItem("adeeka_admin");
+    localStorage.removeItem(
+      "adeeka_admin_token"
+    );
+
+    localStorage.removeItem(
+      "adeeka_admin"
+    );
 
     navigate("/admin/login");
   };
 
-  // ================= SIDEBAR MENU =================
+  // =====================================================
+  // SIDEBAR MENU
+  // =====================================================
 
   const menuItems = [
     {
@@ -112,21 +237,25 @@ const AdminDashboard = () => {
       icon: LayoutDashboard,
       link: "/admin/dashboard",
     },
+
     {
       name: "Products",
       icon: Package,
       link: "/admin/products",
     },
+
     {
       name: "Add Product",
       icon: PlusCircle,
       link: "/admin/add-product",
     },
+
     {
       name: "Orders",
       icon: ShoppingBag,
       link: "/admin/orders",
     },
+
     {
       name: "Customers",
       icon: Users,
@@ -134,7 +263,9 @@ const AdminDashboard = () => {
     },
   ];
 
-  // ================= CHART DATA =================
+  // =====================================================
+  // CHART
+  // =====================================================
 
   const months = [
     "Jan",
@@ -151,37 +282,58 @@ const AdminDashboard = () => {
     "Dec",
   ];
 
-  const chartData = months.map((month, index) => {
-    const found = monthlySales.find(
-      (item) => item._id?.month === index + 1
-    );
+  const chartData = months.map(
+    (month, index) => {
+      const found =
+        monthlySales.find(
+          (item) =>
+            Number(
+              item?._id?.month
+            ) === index + 1
+        );
 
-    return {
-      month,
-      sales: found?.sales || 0,
-    };
-  });
+      return {
+        month,
+        sales: Number(
+          found?.sales || 0
+        ),
+      };
+    }
+  );
 
   const maxSales = Math.max(
-    ...chartData.map((item) => item.sales),
+    ...chartData.map(
+      (item) => item.sales
+    ),
     1
   );
 
-  // ================= FORMAT DATE =================
+  // =====================================================
+  // FORMAT DATE
+  // =====================================================
 
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString("en-PK", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(
+      date
+    ).toLocaleDateString(
+      "en-PK",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
-  // ================= STATUS STYLE =================
+  // =====================================================
+  // STATUS STYLE
+  // =====================================================
 
-  const getStatusStyle = (status) => {
+  const getStatusStyle = (
+    status
+  ) => {
     if (status === "Delivered") {
       return "bg-green-50 text-green-700";
     }
@@ -197,41 +349,57 @@ const AdminDashboard = () => {
     return "bg-yellow-50 text-yellow-700";
   };
 
+  // =====================================================
+  // RENDER
+  // =====================================================
+
   return (
     <div className="min-h-screen bg-[#f7f3ed]">
 
-      {/* =====================================================
-          MOBILE HEADER
-      ===================================================== */}
+      {/* ================================================= */}
+      {/* MOBILE HEADER */}
+      {/* ================================================= */}
 
       <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between bg-white px-5 py-4 border-b border-[#e5ddd2]">
 
         <Link to="/admin/dashboard">
+
           <img
             src={logo}
             alt="Adeeka Fabrics"
             className="w-28 h-auto object-contain"
           />
+
         </Link>
 
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={() =>
+            setSidebarOpen(
+              !sidebarOpen
+            )
+          }
           className="w-10 h-10 flex items-center justify-center border border-[#e5ddd2] text-[#17110d]"
         >
-          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+
+          {sidebarOpen ? (
+            <X size={22} />
+          ) : (
+            <Menu size={22} />
+          )}
+
         </button>
 
       </header>
 
-      {/* =====================================================
-          MAIN LAYOUT
-      ===================================================== */}
+      {/* ================================================= */}
+      {/* MAIN LAYOUT */}
+      {/* ================================================= */}
 
       <div className="flex min-h-screen">
 
-        {/* =====================================================
-            SIDEBAR
-        ===================================================== */}
+        {/* ================================================= */}
+        {/* SIDEBAR */}
+        {/* ================================================= */}
 
         <aside
           className={`
@@ -281,62 +449,68 @@ const AdminDashboard = () => {
 
           <nav className="flex-1 px-4 py-6 space-y-1">
 
-            {menuItems.map((item) => {
+            {menuItems.map(
+              (item) => {
 
-              const Icon = item.icon;
+                const Icon =
+                  item.icon;
 
-              return (
-                <Link
-                  key={item.name}
-                  to={item.link}
-                  onClick={() => setSidebarOpen(false)}
-                  className="
-                    flex
-                    items-center
-                    justify-between
-                    px-4
-                    py-3.5
-                    text-sm
-                    text-white/65
-                    hover:text-white
-                    hover:bg-white/[0.06]
-                    transition
-                    group
-                  "
-                >
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.link}
+                    onClick={() =>
+                      setSidebarOpen(
+                        false
+                      )
+                    }
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      px-4
+                      py-3.5
+                      text-sm
+                      text-white/65
+                      hover:text-white
+                      hover:bg-white/[0.06]
+                      transition
+                      group
+                    "
+                  >
 
-                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
 
-                    <Icon
-                      size={18}
-                      strokeWidth={1.7}
+                      <Icon
+                        size={18}
+                        strokeWidth={1.7}
+                      />
+
+                      <span>
+                        {item.name}
+                      </span>
+
+                    </div>
+
+                    <ChevronRight
+                      size={15}
+                      className="
+                        opacity-0
+                        -translate-x-1
+                        group-hover:opacity-100
+                        group-hover:translate-x-0
+                        transition
+                      "
                     />
 
-                    <span>
-                      {item.name}
-                    </span>
-
-                  </div>
-
-                  <ChevronRight
-                    size={15}
-                    className="
-                      opacity-0
-                      -translate-x-1
-                      group-hover:opacity-100
-                      group-hover:translate-x-0
-                      transition
-                    "
-                  />
-
-                </Link>
-              );
-
-            })}
+                  </Link>
+                );
+              }
+            )}
 
           </nav>
 
-          {/* SIDEBAR BOTTOM */}
+          {/* LOGOUT */}
 
           <div className="p-5 border-t border-white/10">
 
@@ -369,15 +543,13 @@ const AdminDashboard = () => {
 
         </aside>
 
-        {/* =====================================================
-            MAIN CONTENT
-        ===================================================== */}
+        {/* ================================================= */}
+        {/* MAIN CONTENT */}
+        {/* ================================================= */}
 
         <main className="flex-1 min-w-0 px-5 py-7 md:px-8 lg:px-10 lg:py-10">
 
-          {/* =====================================================
-              TOP HEADER
-          ===================================================== */}
+          {/* TOP HEADER */}
 
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between mb-10">
 
@@ -431,9 +603,9 @@ const AdminDashboard = () => {
 
           </div>
 
-          {/* =====================================================
-              LOADING
-          ===================================================== */}
+          {/* ================================================= */}
+          {/* LOADING */}
+          {/* ================================================= */}
 
           {loading ? (
 
@@ -451,9 +623,9 @@ const AdminDashboard = () => {
 
             <>
 
-              {/* =====================================================
-                  STAT CARDS
-              ===================================================== */}
+              {/* ================================================= */}
+              {/* STAT CARDS */}
+              {/* ================================================= */}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
 
@@ -617,7 +789,10 @@ const AdminDashboard = () => {
                       </p>
 
                       <h2 className="font-serif text-3xl mt-3">
-                        Rs. {stats.totalSales.toLocaleString()}
+                        Rs.{" "}
+                        {Number(
+                          stats.totalSales || 0
+                        ).toLocaleString()}
                       </h2>
 
                       <div className="flex items-center gap-1 mt-3 text-xs text-white/50">
@@ -652,9 +827,9 @@ const AdminDashboard = () => {
 
               </div>
 
-              {/* =====================================================
-                  OVERVIEW + QUICK ACTIONS
-              ===================================================== */}
+              {/* ================================================= */}
+              {/* OVERVIEW + QUICK ACTIONS */}
+              {/* ================================================= */}
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
 
@@ -682,81 +857,83 @@ const AdminDashboard = () => {
 
                   </div>
 
-                  {/* REAL SALES CHART */}
-
                   <div className="h-64 flex items-end gap-2 md:gap-4 border-b border-l border-[#e5ddd2] px-3">
 
-                    {chartData.map((item) => {
+                    {chartData.map(
+                      (item) => {
 
-                      const height =
-                        item.sales === 0
-                          ? 3
-                          : Math.max(
-                              (item.sales / maxSales) * 100,
-                              5
-                            );
+                        const height =
+                          item.sales === 0
+                            ? 3
+                            : Math.max(
+                                (item.sales /
+                                  maxSales) *
+                                  100,
+                                5
+                              );
 
-                      return (
-                        <div
-                          key={item.month}
-                          className="flex-1 h-full flex items-end"
-                        >
-
+                        return (
                           <div
-                            className="
-                              w-full
-                              bg-[#b18442]
-                              hover:bg-[#17110d]
-                              transition
-                              relative
-                              group
-                              cursor-pointer
-                            "
-                            style={{
-                              height: `${height}%`,
-                            }}
+                            key={item.month}
+                            className="flex-1 h-full flex items-end"
                           >
 
-                            <span
+                            <div
                               className="
-                                absolute
-                                -top-8
-                                left-1/2
-                                -translate-x-1/2
-                                whitespace-nowrap
-                                text-[9px]
-                                text-[#75695e]
-                                opacity-0
-                                group-hover:opacity-100
+                                w-full
+                                bg-[#b18442]
+                                hover:bg-[#17110d]
                                 transition
+                                relative
+                                group
+                                cursor-pointer
                               "
+                              style={{
+                                height: `${height}%`,
+                              }}
                             >
-                              Rs. {item.sales.toLocaleString()}
-                            </span>
+
+                              <span
+                                className="
+                                  absolute
+                                  -top-8
+                                  left-1/2
+                                  -translate-x-1/2
+                                  whitespace-nowrap
+                                  text-[9px]
+                                  text-[#75695e]
+                                  opacity-0
+                                  group-hover:opacity-100
+                                  transition
+                                "
+                              >
+                                Rs.{" "}
+                                {item.sales.toLocaleString()}
+                              </span>
+
+                            </div>
 
                           </div>
-
-                        </div>
-                      );
-
-                    })}
+                        );
+                      }
+                    )}
 
                   </div>
 
-                  {/* MONTHS */}
-
                   <div className="flex justify-between mt-3 px-1">
 
-                    {months.map((month) => (
+                    {months.map(
+                      (month) => (
 
-                      <span
-                        key={month}
-                        className="text-[9px] text-[#a0968b]"
-                      >
-                        {month}
-                      </span>
+                        <span
+                          key={month}
+                          className="text-[9px] text-[#a0968b]"
+                        >
+                          {month}
+                        </span>
 
-                    ))}
+                      )
+                    )}
 
                   </div>
 
@@ -776,6 +953,8 @@ const AdminDashboard = () => {
 
                   <div className="space-y-3">
 
+                    {/* ADD PRODUCT */}
+
                     <Link
                       to="/admin/add-product"
                       className="
@@ -788,7 +967,6 @@ const AdminDashboard = () => {
                         hover:border-[#b18442]
                         hover:bg-[#faf8f4]
                         transition
-                        group
                       "
                     >
 
@@ -824,6 +1002,8 @@ const AdminDashboard = () => {
 
                     </Link>
 
+                    {/* MANAGE PRODUCTS */}
+
                     <Link
                       to="/admin/products"
                       className="
@@ -836,7 +1016,6 @@ const AdminDashboard = () => {
                         hover:border-[#b18442]
                         hover:bg-[#faf8f4]
                         transition
-                        group
                       "
                     >
 
@@ -872,6 +1051,8 @@ const AdminDashboard = () => {
 
                     </Link>
 
+                    {/* ORDERS */}
+
                     <Link
                       to="/admin/orders"
                       className="
@@ -884,7 +1065,6 @@ const AdminDashboard = () => {
                         hover:border-[#b18442]
                         hover:bg-[#faf8f4]
                         transition
-                        group
                       "
                     >
 
@@ -920,6 +1100,8 @@ const AdminDashboard = () => {
 
                     </Link>
 
+                    {/* CUSTOMERS */}
+
                     <Link
                       to="/admin/users"
                       className="
@@ -932,7 +1114,6 @@ const AdminDashboard = () => {
                         hover:border-[#b18442]
                         hover:bg-[#faf8f4]
                         transition
-                        group
                       "
                     >
 
@@ -974,9 +1155,9 @@ const AdminDashboard = () => {
 
               </div>
 
-              {/* =====================================================
-                  RECENT ORDERS
-              ===================================================== */}
+              {/* ================================================= */}
+              {/* RECENT ORDERS */}
+              {/* ================================================= */}
 
               <section className="mt-8 bg-white border border-[#e5ddd2]">
 
@@ -1003,9 +1184,8 @@ const AdminDashboard = () => {
 
                 </div>
 
-                {/* ORDERS */}
-
-                {recentOrders.length === 0 ? (
+                {recentOrders.length ===
+                0 ? (
 
                   <div className="py-16 text-center">
 
@@ -1064,63 +1244,96 @@ const AdminDashboard = () => {
 
                       <tbody>
 
-                        {recentOrders.map((order) => (
+                        {recentOrders.map(
+                          (order) => (
 
-                          <tr
-                            key={order._id}
-                            className="border-b border-[#eee8df] last:border-0 hover:bg-[#faf8f4] transition"
-                          >
+                            <tr
+                              key={
+                                order._id
+                              }
+                              className="border-b border-[#eee8df] last:border-0 hover:bg-[#faf8f4] transition"
+                            >
 
-                            <td className="px-6 py-5">
+                              <td className="px-6 py-5">
 
-                              <p className="text-sm font-medium text-[#17110d]">
-                                {order.customer?.fullName || "Customer"}
-                              </p>
+                                <p className="text-sm font-medium text-[#17110d]">
 
-                              <p className="text-[11px] text-[#75695e] mt-1">
-                                {order.user?.email || "-"}
-                              </p>
+                                  {order.customer
+                                    ?.fullName ||
+                                    order.user
+                                      ?.name ||
+                                    "Customer"}
 
-                            </td>
+                                </p>
 
-                            <td className="px-6 py-5 text-sm text-[#75695e]">
-                              {order.items?.length || 0}
-                            </td>
+                                <p className="text-[11px] text-[#75695e] mt-1">
 
-                            <td className="px-6 py-5">
+                                  {order.user
+                                    ?.email ||
+                                    "-"}
 
-                              <span className="text-sm font-medium text-[#17110d]">
-                                Rs.{" "}
-                                {order.totalPrice?.toLocaleString() || 0}
-                              </span>
+                                </p>
 
-                            </td>
+                              </td>
 
-                            <td className="px-6 py-5">
+                              <td className="px-6 py-5 text-sm text-[#75695e]">
 
-                              <span
-                                className={`
-                                  inline-flex
-                                  px-3
-                                  py-1.5
-                                  text-[10px]
-                                  uppercase
-                                  tracking-wider
-                                  ${getStatusStyle(order.status)}
-                                `}
-                              >
-                                {order.status}
-                              </span>
+                                {order.items
+                                  ?.length ||
+                                  0}
 
-                            </td>
+                              </td>
 
-                            <td className="px-6 py-5 text-xs text-[#75695e]">
-                              {formatDate(order.createdAt)}
-                            </td>
+                              <td className="px-6 py-5">
 
-                          </tr>
+                                <span className="text-sm font-medium text-[#17110d]">
 
-                        ))}
+                                  Rs.{" "}
+
+                                  {Number(
+                                    order.totalPrice ||
+                                      0
+                                  ).toLocaleString()}
+
+                                </span>
+
+                              </td>
+
+                              <td className="px-6 py-5">
+
+                                <span
+                                  className={`
+                                    inline-flex
+                                    px-3
+                                    py-1.5
+                                    text-[10px]
+                                    uppercase
+                                    tracking-wider
+                                    ${getStatusStyle(
+                                      order.status
+                                    )}
+                                  `}
+                                >
+
+                                  {order.status ||
+                                    "Pending"}
+
+                                </span>
+
+                              </td>
+
+                              <td className="px-6 py-5 text-xs text-[#75695e]">
+
+                                {formatDate(
+                                  order.createdAt
+                                )}
+
+                              </td>
+
+                            </tr>
+
+                          )
+                        )}
 
                       </tbody>
 
@@ -1136,12 +1349,16 @@ const AdminDashboard = () => {
 
           )}
 
+          {/* ================================================= */}
           {/* FOOTER */}
+          {/* ================================================= */}
 
           <div className="mt-8 pb-4 text-center">
 
             <p className="text-[10px] uppercase tracking-[2px] text-[#a0968b]">
-              © {new Date().getFullYear()} Adeeka Fabrics — Admin Panel
+              ©{" "}
+              {new Date().getFullYear()}{" "}
+              Adeeka Fabrics — Admin Panel
             </p>
 
           </div>

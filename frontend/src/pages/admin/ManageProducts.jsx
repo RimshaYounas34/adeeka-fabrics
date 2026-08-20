@@ -10,10 +10,16 @@ import {
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// VITE_API_URL = http://localhost:5000/api
+// Static images ke liye /api remove karna hoga
+const SERVER_URL = API_URL.replace(/\/api\/?$/, "");
+
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [error, setError] = useState("");
 
   // =====================================================
   // FETCH PRODUCTS
@@ -22,12 +28,18 @@ const ManageProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const response = await fetch(
-        `${API_URL}/api/products`
-      );
+      // IMPORTANT:
+      // API_URL already contains /api
+      // So endpoint will be:
+      // http://localhost:5000/api/products
+
+      const response = await fetch(`${API_URL}/products`);
 
       const data = await response.json();
+
+      console.log("PRODUCTS RESPONSE:", data);
 
       if (!response.ok) {
         throw new Error(
@@ -42,10 +54,18 @@ const ManageProducts = () => {
       setProducts(productList);
     } catch (error) {
       console.error("Products fetch error:", error);
+
+      setError(
+        error.message || "Unable to load products"
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
 
   useEffect(() => {
     fetchProducts();
@@ -61,10 +81,12 @@ const ManageProducts = () => {
       product.images?.[0] ||
       "";
 
+    // No image
     if (!image) {
       return "/placeholder.jpg";
     }
 
+    // Full URL
     if (
       image.startsWith("http://") ||
       image.startsWith("https://")
@@ -72,11 +94,13 @@ const ManageProducts = () => {
       return image;
     }
 
+    // If backend returns /uploads/...
     if (image.startsWith("/")) {
-      return `${API_URL}${image}`;
+      return `${SERVER_URL}${image}`;
     }
 
-    return `${API_URL}/${image}`;
+    // If backend returns uploads/...
+    return `${SERVER_URL}/${image}`;
   };
 
   // =====================================================
@@ -92,15 +116,22 @@ const ManageProducts = () => {
 
     try {
       setDeleting(id);
+      setError("");
 
       const token = localStorage.getItem(
         "adeeka_admin_token"
       );
 
+      // IMPORTANT:
+      // API_URL already has /api
+      // Result:
+      // http://localhost:5000/api/products/:id
+
       const response = await fetch(
-        `${API_URL}/api/products/${id}`,
+        `${API_URL}/products/${id}`,
         {
           method: "DELETE",
+
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -109,6 +140,8 @@ const ManageProducts = () => {
 
       const data = await response.json();
 
+      console.log("DELETE PRODUCT RESPONSE:", data);
+
       if (!response.ok) {
         throw new Error(
           data.message || "Delete failed"
@@ -116,14 +149,18 @@ const ManageProducts = () => {
       }
 
       setProducts((prev) =>
-        prev.filter((product) => product._id !== id)
+        prev.filter(
+          (product) => product._id !== id
+        )
       );
 
       alert("Product deleted successfully");
     } catch (error) {
       console.error("Delete error:", error);
+
       alert(
-        error.message || "Unable to delete product"
+        error.message ||
+          "Unable to delete product"
       );
     } finally {
       setDeleting(null);
@@ -144,7 +181,6 @@ const ManageProducts = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f3ed] px-5 py-8 md:px-8 lg:px-10">
-
       <div className="max-w-7xl mx-auto">
 
         {/* ================================================= */}
@@ -177,8 +213,11 @@ const ManageProducts = () => {
 
           <div className="flex gap-3">
 
+            {/* REFRESH */}
+
             <button
               onClick={fetchProducts}
+              disabled={loading}
               className="
                 inline-flex
                 items-center
@@ -194,14 +233,24 @@ const ManageProducts = () => {
                 text-[#17110d]
                 hover:border-[#b18442]
                 transition
+                disabled:opacity-50
               "
             >
 
-              <RefreshCw size={16} />
+              <RefreshCw
+                size={16}
+                className={
+                  loading
+                    ? "animate-spin"
+                    : ""
+                }
+              />
 
               Refresh
 
             </button>
+
+            {/* ADD PRODUCT */}
 
             <Link
               to="/admin/add-product"
@@ -230,6 +279,31 @@ const ManageProducts = () => {
           </div>
 
         </div>
+
+        {/* ================================================= */}
+        {/* ERROR */}
+        {/* ================================================= */}
+
+        {error && (
+          <div className="
+            mb-6
+            bg-red-50
+            border
+            border-red-200
+            text-red-700
+            px-5
+            py-4
+            text-sm
+          ">
+            <p className="font-medium">
+              Unable to load products
+            </p>
+
+            <p className="text-xs mt-1">
+              {error}
+            </p>
+          </div>
+        )}
 
         {/* ================================================= */}
         {/* PRODUCT COUNT */}
@@ -272,16 +346,18 @@ const ManageProducts = () => {
 
           <div className="bg-white border border-[#e5ddd2] py-20 text-center">
 
-            <div className="
-              w-10
-              h-10
-              border-2
-              border-[#d8c3a5]
-              border-t-[#b18442]
-              rounded-full
-              animate-spin
-              mx-auto
-            " />
+            <div
+              className="
+                w-10
+                h-10
+                border-2
+                border-[#d8c3a5]
+                border-t-[#b18442]
+                rounded-full
+                animate-spin
+                mx-auto
+              "
+            />
 
             <p className="text-sm text-[#75695e] mt-4">
               Loading products...
@@ -404,8 +480,16 @@ const ManageProducts = () => {
 
                           <img
                             src={getImage(product)}
-                            alt={product.name}
+                            alt={product.name || "Product"}
                             onError={(e) => {
+                              if (
+                                e.currentTarget.src.includes(
+                                  "placeholder.jpg"
+                                )
+                              ) {
+                                return;
+                              }
+
                               e.currentTarget.src =
                                 "/placeholder.jpg";
                             }}
@@ -420,12 +504,12 @@ const ManageProducts = () => {
                           <div>
 
                             <p className="text-sm font-medium text-[#17110d]">
-                              {product.name}
+                              {product.name || "Unnamed Product"}
                             </p>
 
                             <p className="text-[11px] text-[#75695e] mt-1">
                               ID:{" "}
-                              {product._id?.slice(-8)}
+                              {product._id?.slice(-8) || "-"}
                             </p>
 
                           </div>
@@ -438,16 +522,18 @@ const ManageProducts = () => {
 
                       <td className="px-6 py-4">
 
-                        <span className="
-                          inline-flex
-                          px-3
-                          py-1.5
-                          bg-[#f5eee4]
-                          text-[10px]
-                          uppercase
-                          tracking-wider
-                          text-[#75695e]
-                        ">
+                        <span
+                          className="
+                            inline-flex
+                            px-3
+                            py-1.5
+                            bg-[#f5eee4]
+                            text-[10px]
+                            uppercase
+                            tracking-wider
+                            text-[#75695e]
+                          "
+                        >
                           {product.category || "-"}
                         </span>
 
@@ -468,10 +554,20 @@ const ManageProducts = () => {
 
                       <td className="px-6 py-4">
 
-                        <span className="text-sm text-[#75695e]">
+                        <span
+                          className={`text-sm ${
+                            Number(
+                              product.stock ??
+                                product.quantity ??
+                                0
+                            ) <= 0
+                              ? "text-red-500"
+                              : "text-[#75695e]"
+                          }`}
+                        >
                           {product.stock ??
                             product.quantity ??
-                            "-"}
+                            0}
                         </span>
 
                       </td>
@@ -480,17 +576,32 @@ const ManageProducts = () => {
 
                       <td className="px-6 py-4">
 
-                        <span className="
-                          inline-flex
-                          px-3
-                          py-1.5
-                          text-[10px]
-                          uppercase
-                          tracking-wider
-                          bg-green-50
-                          text-green-700
-                        ">
-                          Active
+                        <span
+                          className={`
+                            inline-flex
+                            px-3
+                            py-1.5
+                            text-[10px]
+                            uppercase
+                            tracking-wider
+                            ${
+                              Number(
+                                product.stock ??
+                                  product.quantity ??
+                                  0
+                              ) > 0
+                                ? "bg-green-50 text-green-700"
+                                : "bg-red-50 text-red-600"
+                            }
+                          `}
+                        >
+                          {Number(
+                            product.stock ??
+                              product.quantity ??
+                              0
+                          ) > 0
+                            ? "Active"
+                            : "Out of Stock"}
                         </span>
 
                       </td>
@@ -500,6 +611,8 @@ const ManageProducts = () => {
                       <td className="px-6 py-4">
 
                         <div className="flex items-center justify-end gap-2">
+
+                          {/* EDIT */}
 
                           <Link
                             to={`/admin/edit-product/${product._id}`}
@@ -522,6 +635,8 @@ const ManageProducts = () => {
                             <Edit size={16} />
 
                           </Link>
+
+                          {/* DELETE */}
 
                           <button
                             type="button"
@@ -550,13 +665,18 @@ const ManageProducts = () => {
                             title="Delete Product"
                           >
 
-                            {deleting === product._id ? (
+                            {deleting ===
+                            product._id ? (
+
                               <RefreshCw
                                 size={16}
                                 className="animate-spin"
                               />
+
                             ) : (
+
                               <Trash2 size={16} />
+
                             )}
 
                           </button>
@@ -579,7 +699,9 @@ const ManageProducts = () => {
 
         )}
 
+        {/* ================================================= */}
         {/* BACK */}
+        {/* ================================================= */}
 
         <Link
           to="/admin/dashboard"
@@ -604,7 +726,6 @@ const ManageProducts = () => {
         </Link>
 
       </div>
-
     </div>
   );
 };

@@ -6,11 +6,28 @@ import { useCart } from "../context/CartContext.jsx";
 import BASE_URL from "../api.js";
 
 export default function CheckoutPage() {
-  const { items, cartTotal } = useCart();
+  // =====================================================
+  // CART
+  // =====================================================
+
+  const {
+    items,
+    cartTotal,
+    clearCart,
+  } = useCart();
+
   const navigate = useNavigate();
+
+  // =====================================================
+  // STATES
+  // =====================================================
 
   const [placed, setPlaced] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // =====================================================
+  // CUSTOMER FORM
+  // =====================================================
 
   const [form, setForm] = useState({
     fullName: "",
@@ -20,46 +37,95 @@ export default function CheckoutPage() {
     phone: "",
   });
 
-  // ================= GET LOGGED-IN USER =================
+  // =====================================================
+  // GET LOGGED-IN USER
+  // =====================================================
 
-  const savedUser = JSON.parse(
-    localStorage.getItem("adeeka_user")
-  );
+  const savedUser = (() => {
+    try {
+      const user = localStorage.getItem("adeeka_user");
 
-  // ================= FORM CHANGE =================
+      return user ? JSON.parse(user) : null;
+    } catch (error) {
+      console.log("User localStorage error:", error);
+
+      return null;
+    }
+  })();
+
+  // =====================================================
+  // FORM CHANGE
+  // =====================================================
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  // ================= PLACE ORDER =================
+  // =====================================================
+  // PLACE ORDER
+  // =====================================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check cart
-    if (items.length === 0) {
+    // =================================================
+    // CHECK CART
+    // =================================================
+
+    if (!items || items.length === 0) {
       alert("Your cart is empty.");
       return;
     }
 
-    // Check login
+    // =================================================
+    // CHECK LOGIN
+    // =================================================
+
     if (!savedUser) {
       alert("Please login before placing an order.");
+
       navigate("/login");
+
       return;
     }
 
-    // Check products
+    // =================================================
+    // CHECK USER DATA
+    // =================================================
+
+    if (!savedUser.uid || !savedUser.email) {
+      alert(
+        "Your login information is incomplete. Please login again."
+      );
+
+      localStorage.removeItem("adeeka_user");
+
+      navigate("/login");
+
+      return;
+    }
+
+    // =================================================
+    // CHECK PRODUCTS
+    // =================================================
+
     const invalidProduct = items.find(
-      (item) => !item._id && !item.id && !item.slug
+      (item) =>
+        !item._id &&
+        !item.id &&
+        !item.slug
     );
 
     if (invalidProduct) {
-      console.log("Invalid Product:", invalidProduct);
+      console.log(
+        "Invalid Product:",
+        invalidProduct
+      );
 
       alert(
         "Some product information is missing. Please add the product again."
@@ -71,7 +137,9 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // ================= ORDER ITEMS =================
+      // =================================================
+      // ORDER ITEMS
+      // =================================================
 
       const orderItems = items.map((item) => ({
         product:
@@ -79,7 +147,9 @@ export default function CheckoutPage() {
           item.id ||
           item.slug,
 
-        name: item.name || "Product",
+        name:
+          item.name ||
+          "Product",
 
         image:
           item.images?.[0] ||
@@ -99,21 +169,37 @@ export default function CheckoutPage() {
           item.color || "",
       }));
 
-      // ================= ORDER DATA =================
+      // =================================================
+      // ORDER DATA
+      // =================================================
 
       const orderData = {
         user: {
           uid: savedUser.uid,
-          name: savedUser.name,
-          email: savedUser.email,
+
+          name:
+            savedUser.name ||
+            "User",
+
+          email:
+            savedUser.email,
         },
 
         customer: {
-          fullName: form.fullName,
-          address: form.address,
-          city: form.city,
-          postalCode: form.postalCode,
-          phone: form.phone,
+          fullName:
+            form.fullName,
+
+          address:
+            form.address,
+
+          city:
+            form.city,
+
+          postalCode:
+            form.postalCode,
+
+          phone:
+            form.phone,
         },
 
         items: orderItems,
@@ -122,9 +208,16 @@ export default function CheckoutPage() {
           Number(cartTotal) || 0,
       };
 
-      console.log("Sending Order:", orderData);
+      console.log(
+        "Sending Order:",
+        orderData
+      );
 
-      // ================= API =================
+      // =================================================
+      // API REQUEST
+      // IMPORTANT:
+      // Backend route is /api/orders
+      // =================================================
 
       const response = await fetch(
         `${BASE_URL}/orders`,
@@ -132,39 +225,69 @@ export default function CheckoutPage() {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
 
-          body: JSON.stringify(orderData),
+          body:
+            JSON.stringify(orderData),
         }
       );
 
-      const data = await response.json();
+      // =================================================
+      // RESPONSE
+      // =================================================
 
-      console.log("Order Response:", data);
+      const data =
+        await response.json();
 
-      // ================= ERROR =================
+      console.log(
+        "Order Response:",
+        data
+      );
+
+      // =================================================
+      // API ERROR
+      // =================================================
 
       if (!response.ok) {
         alert(
           data.message ||
-          "Unable to place order."
+            "Unable to place order."
         );
 
         return;
       }
 
-      // ================= SUCCESS =================
+      // =================================================
+      // ORDER SUCCESS
+      // =================================================
 
       console.log(
         "Order saved successfully:",
         data.order
       );
 
+      // =================================================
+      // CLEAR CART
+      // IMPORTANT
+      // Order successful hone ke baad
+      // cart empty ho jayega.
+      // =================================================
+
+      clearCart();
+
+      // =================================================
+      // SHOW SUCCESS PAGE
+      // =================================================
+
       setPlaced(true);
 
     } catch (error) {
-      console.log("Order Error:", error);
+      console.log(
+        "Order Error:",
+        error
+      );
 
       alert(
         "Unable to connect to server. Please make sure backend is running."
@@ -175,7 +298,9 @@ export default function CheckoutPage() {
     }
   };
 
-  // ================= SUCCESS PAGE =================
+  // =====================================================
+  // SUCCESS PAGE
+  // =====================================================
 
   if (placed) {
     return (
@@ -198,17 +323,19 @@ export default function CheckoutPage() {
 
           {/* SUCCESS ICON */}
 
-          <div className="
-            w-16
-            h-16
-            mx-auto
-            mb-5
-            rounded-full
-            bg-gold
-            flex
-            items-center
-            justify-center
-          ">
+          <div
+            className="
+              w-16
+              h-16
+              mx-auto
+              mb-5
+              rounded-full
+              bg-gold
+              flex
+              items-center
+              justify-center
+            "
+          >
             <span className="text-white text-2xl">
               ✓
             </span>
@@ -216,33 +343,40 @@ export default function CheckoutPage() {
 
           {/* TITLE */}
 
-          <h1 className="
-            font-display
-            text-3xl
-            text-charcoal
-            mb-3
-          ">
+          <h1
+            className="
+              font-display
+              text-3xl
+              text-charcoal
+              mb-3
+            "
+          >
             Order Confirmed!
           </h1>
 
           {/* MESSAGE */}
 
-          <p className="
-            font-elegant
-            text-charcoal/60
-            text-lg
-            mb-8
-            leading-7
-          ">
+          <p
+            className="
+              font-elegant
+              text-charcoal/60
+              text-lg
+              mb-8
+              leading-7
+            "
+          >
             Thank you for your order.
             <br />
-            We'll contact you soon with delivery details.
+            We'll contact you soon with
+            delivery details.
           </p>
 
           {/* HOME */}
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() =>
+              navigate("/")
+            }
             className="
               bg-charcoal
               text-cream
@@ -266,43 +400,55 @@ export default function CheckoutPage() {
     );
   }
 
-  // ================= CHECKOUT PAGE =================
+  // =====================================================
+  // CHECKOUT PAGE
+  // =====================================================
 
   return (
-    <div className="
-      bg-cream
-      min-h-screen
-      px-6
-      md:px-10
-      py-14
-    ">
+    <div
+      className="
+        bg-cream
+        min-h-screen
+        px-6
+        md:px-10
+        py-14
+      "
+    >
 
-      <div className="
-        max-w-5xl
-        mx-auto
-        grid
-        md:grid-cols-2
-        gap-10
-      ">
+      <div
+        className="
+          max-w-5xl
+          mx-auto
+          grid
+          md:grid-cols-2
+          gap-10
+        "
+      >
 
-        {/* ================= CUSTOMER DETAILS ================= */}
+        {/* ================================================= */}
+        {/* CUSTOMER DETAILS */}
+        {/* ================================================= */}
 
         <div>
 
-          <h1 className="
-            font-display
-            text-3xl
-            text-charcoal
-            mb-2
-          ">
+          <h1
+            className="
+              font-display
+              text-3xl
+              text-charcoal
+              mb-2
+            "
+          >
             Checkout
           </h1>
 
-          <p className="
-            text-sm
-            text-charcoal/60
-            mb-7
-          ">
+          <p
+            className="
+              text-sm
+              text-charcoal/60
+              mb-7
+            "
+          >
             Enter your delivery details below.
           </p>
 
@@ -319,11 +465,13 @@ export default function CheckoutPage() {
 
             <div>
 
-              <label className="
-                block
-                mb-2
-                text-charcoal
-              ">
+              <label
+                className="
+                  block
+                  mb-2
+                  text-charcoal
+                "
+              >
                 Full Name
               </label>
 
@@ -352,11 +500,13 @@ export default function CheckoutPage() {
 
             <div>
 
-              <label className="
-                block
-                mb-2
-                text-charcoal
-              ">
+              <label
+                className="
+                  block
+                  mb-2
+                  text-charcoal
+                "
+              >
                 Address
               </label>
 
@@ -383,20 +533,26 @@ export default function CheckoutPage() {
 
             {/* CITY + POSTAL */}
 
-            <div className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              gap-4
-            ">
+            <div
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                gap-4
+              "
+            >
+
+              {/* CITY */}
 
               <div>
 
-                <label className="
-                  block
-                  mb-2
-                  text-charcoal
-                ">
+                <label
+                  className="
+                    block
+                    mb-2
+                    text-charcoal
+                  "
+                >
                   City
                 </label>
 
@@ -421,13 +577,17 @@ export default function CheckoutPage() {
 
               </div>
 
+              {/* POSTAL CODE */}
+
               <div>
 
-                <label className="
-                  block
-                  mb-2
-                  text-charcoal
-                ">
+                <label
+                  className="
+                    block
+                    mb-2
+                    text-charcoal
+                  "
+                >
                   Postal Code
                 </label>
 
@@ -458,11 +618,13 @@ export default function CheckoutPage() {
 
             <div>
 
-              <label className="
-                block
-                mb-2
-                text-charcoal
-              ">
+              <label
+                className="
+                  block
+                  mb-2
+                  text-charcoal
+                "
+              >
                 Phone Number
               </label>
 
@@ -518,21 +680,27 @@ export default function CheckoutPage() {
 
         </div>
 
-        {/* ================= ORDER SUMMARY ================= */}
+        {/* ================================================= */}
+        {/* ORDER SUMMARY */}
+        {/* ================================================= */}
 
-        <div className="
-          bg-white
-          p-6
-          md:p-8
-          h-fit
-        ">
+        <div
+          className="
+            bg-white
+            p-6
+            md:p-8
+            h-fit
+          "
+        >
 
-          <h2 className="
-            font-display
-            text-xl
-            text-charcoal
-            mb-5
-          ">
+          <h2
+            className="
+              font-display
+              text-xl
+              text-charcoal
+              mb-5
+            "
+          >
             Order Summary
           </h2>
 
@@ -545,6 +713,8 @@ export default function CheckoutPage() {
                   ${item._id || item.id || item.slug}
                   -
                   ${item.size || ""}
+                  -
+                  ${item.color || ""}
                 `}
                 className="
                   flex
@@ -558,16 +728,16 @@ export default function CheckoutPage() {
 
                 {/* PRODUCT */}
 
-                <div className="
-                  flex
-                  items-center
-                  gap-3
-                ">
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-3
+                  "
+                >
 
-                  {(
-                    item.images?.[0] ||
-                    item.image
-                  ) && (
+                  {(item.images?.[0] ||
+                    item.image) && (
 
                     <img
                       src={
@@ -590,16 +760,17 @@ export default function CheckoutPage() {
                       {item.name}
                     </p>
 
-                    <p className="
-                      text-xs
-                      text-charcoal/50
-                      mt-1
-                    ">
+                    <p
+                      className="
+                        text-xs
+                        text-charcoal/50
+                        mt-1
+                      "
+                    >
                       Qty: {item.qty}
 
                       {item.size &&
-                        ` • Size: ${item.size}`
-                      }
+                        ` • Size: ${item.size}`}
                     </p>
 
                   </div>
@@ -608,10 +779,12 @@ export default function CheckoutPage() {
 
                 {/* PRICE */}
 
-                <span className="
-                  text-charcoal
-                  whitespace-nowrap
-                ">
+                <span
+                  className="
+                    text-charcoal
+                    whitespace-nowrap
+                  "
+                >
                   PKR{" "}
                   {(
                     Number(item.price || 0) *
@@ -627,16 +800,18 @@ export default function CheckoutPage() {
 
           {/* TOTAL */}
 
-          <div className="
-            flex
-            justify-between
-            border-t
-            border-charcoal/10
-            pt-4
-            mt-6
-            font-semibold
-            text-charcoal
-          ">
+          <div
+            className="
+              flex
+              justify-between
+              border-t
+              border-charcoal/10
+              pt-4
+              mt-6
+              font-semibold
+              text-charcoal
+            "
+          >
 
             <span>
               Total
@@ -644,7 +819,9 @@ export default function CheckoutPage() {
 
             <span className="text-gold">
               PKR{" "}
-              {Number(cartTotal || 0).toLocaleString()}
+              {Number(
+                cartTotal || 0
+              ).toLocaleString()}
             </span>
 
           </div>

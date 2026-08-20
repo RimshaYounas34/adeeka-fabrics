@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -10,37 +11,38 @@ import {
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const ManageOrders = () => {
 
+const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-  const [selectedOrder, setSelectedOrder] =
-    useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // =====================================================
   // FETCH ORDERS
   // =====================================================
 
   const fetchOrders = async () => {
-
     try {
-
       setLoading(true);
 
       const token = localStorage.getItem(
         "adeeka_admin_token"
       );
 
+      // IMPORTANT:
+      // VITE_API_URL already contains /api
+      // So /api dobara nahi lagana
+
       const response = await fetch(
-        `${API_URL}/api/admin/orders`,
+        `${API_URL}/admin/orders`,
         {
+          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -49,15 +51,31 @@ const ManageOrders = () => {
 
       const data = await response.json();
 
+      console.log("=================================");
+      console.log("FETCHING ADMIN ORDERS");
+      console.log(
+        "URL:",
+        `${API_URL}/admin/orders`
+      );
+      console.log("STATUS:", response.status);
+      console.log("DATA:", data);
+      console.log("=================================");
+
       if (!response.ok) {
-
-        console.log(
-          "Orders error:",
-          data
-        );
-
+        console.log("Orders error:", data);
         return;
       }
+
+      /*
+        Backend response normally:
+
+        {
+          success: true,
+          orders: [...]
+        }
+
+        Agar direct array aaye to woh bhi handle hoga.
+      */
 
       const orderData = Array.isArray(data)
         ? data
@@ -65,20 +83,14 @@ const ManageOrders = () => {
 
       setOrders(orderData);
       setFilteredOrders(orderData);
-
     } catch (error) {
-
       console.log(
         "Orders connection error:",
         error
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
   // =====================================================
@@ -86,9 +98,7 @@ const ManageOrders = () => {
   // =====================================================
 
   useEffect(() => {
-
     fetchOrders();
-
   }, []);
 
   // =====================================================
@@ -96,75 +106,52 @@ const ManageOrders = () => {
   // =====================================================
 
   useEffect(() => {
-
     let result = [...orders];
 
     // SEARCH
-
     if (search.trim() !== "") {
+      const text = search.toLowerCase();
 
-      const text =
-        search.toLowerCase();
+      result = result.filter((order) => {
+        const name =
+          order.customer?.fullName ||
+          order.user?.fullName ||
+          order.user?.name ||
+          order.shippingAddress?.fullName ||
+          "";
 
-      result = result.filter(
-        (order) => {
+        const email =
+          order.customer?.email ||
+          order.user?.email ||
+          order.shippingAddress?.email ||
+          "";
 
-          const name =
-            order.customer?.fullName ||
-            order.user?.fullName ||
-            order.user?.name ||
-            "";
+        const id = order._id || "";
 
-          const email =
-            order.customer?.email ||
-            order.user?.email ||
-            "";
-
-          const id =
-            order._id || "";
-
-          return (
-            name
-              .toLowerCase()
-              .includes(text) ||
-            email
-              .toLowerCase()
-              .includes(text) ||
-            id
-              .toLowerCase()
-              .includes(text)
-          );
-
-        }
-      );
-
+        return (
+          name.toLowerCase().includes(text) ||
+          email.toLowerCase().includes(text) ||
+          id.toLowerCase().includes(text)
+        );
+      });
     }
 
     // STATUS
-
     if (statusFilter !== "All") {
-
       result = result.filter(
         (order) =>
           order.status === statusFilter
       );
-
     }
 
     setFilteredOrders(result);
-
-  }, [
-    search,
-    statusFilter,
-    orders,
-  ]);
+  }, [search, statusFilter, orders]);
 
   // =====================================================
   // STATUS STYLE
   // =====================================================
 
   const getStatusStyle = (status) => {
-
     if (status === "Delivered") {
       return "bg-green-50 text-green-700";
     }
@@ -182,7 +169,6 @@ const ManageOrders = () => {
     }
 
     return "bg-yellow-50 text-yellow-700";
-
   };
 
   // =====================================================
@@ -190,19 +176,16 @@ const ManageOrders = () => {
   // =====================================================
 
   const formatDate = (date) => {
-
     if (!date) return "-";
 
-    return new Date(date)
-      .toLocaleDateString(
-        "en-PK",
-        {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }
-      );
-
+    return new Date(date).toLocaleDateString(
+      "en-PK",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   // =====================================================
@@ -210,13 +193,9 @@ const ManageOrders = () => {
   // =====================================================
 
   const shortOrderId = (id) => {
-
     if (!id) return "-";
 
-    return `#${id
-      .slice(-6)
-      .toUpperCase()}`;
-
+    return `#${id.slice(-6).toUpperCase()}`;
   };
 
   // =====================================================
@@ -224,24 +203,22 @@ const ManageOrders = () => {
   // =====================================================
 
   const getCustomerName = (order) => {
-
     return (
       order.customer?.fullName ||
       order.user?.fullName ||
       order.user?.name ||
+      order.shippingAddress?.fullName ||
       "Customer"
     );
-
   };
 
   const getCustomerEmail = (order) => {
-
     return (
       order.customer?.email ||
       order.user?.email ||
+      order.shippingAddress?.email ||
       "-"
     );
-
   };
 
   // =====================================================
@@ -249,62 +226,56 @@ const ManageOrders = () => {
   // =====================================================
 
   const getOrderTotal = (order) => {
-
     return Number(
       order.totalPrice ||
-      order.total ||
-      order.amount ||
-      0
+        order.total ||
+        order.amount ||
+        order.grandTotal ||
+        0
     );
-
   };
 
   // =====================================================
-  // UPDATE STATUS
+  // UPDATE ORDER STATUS
   // =====================================================
 
   const updateOrderStatus = async (
     orderId,
     newStatus
   ) => {
-
     try {
+      const token = localStorage.getItem(
+        "adeeka_admin_token"
+      );
 
-      const token =
-        localStorage.getItem(
-          "adeeka_admin_token"
-        );
+      const response = await fetch(
+        `${API_URL}/admin/orders/${orderId}`,
+        {
+          method: "PUT",
 
-      const response =
-        await fetch(
-          `${API_URL}/api/admin/orders/${orderId}`,
-          {
-            method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
 
-            headers: {
-              "Content-Type":
-                "application/json",
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        }
+      );
 
-              Authorization:
-                `Bearer ${token}`,
-            },
+      const data = await response.json();
 
-            body: JSON.stringify({
-              status: newStatus,
-            }),
-          }
-        );
-
-      const data =
-        await response.json();
+      console.log(
+        "STATUS UPDATE RESPONSE:",
+        data
+      );
 
       if (!response.ok) {
-
         console.log(
           "Status update error:",
           data
         );
-
         return;
       }
 
@@ -313,8 +284,7 @@ const ManageOrders = () => {
           order._id === orderId
             ? {
                 ...order,
-                status:
-                  newStatus,
+                status: newStatus,
               }
             : order
         )
@@ -324,27 +294,24 @@ const ManageOrders = () => {
         selectedOrder &&
         selectedOrder._id === orderId
       ) {
-
         setSelectedOrder({
           ...selectedOrder,
           status: newStatus,
         });
-
       }
-
     } catch (error) {
-
       console.log(
         "Update status error:",
         error
       );
-
     }
-
   };
 
-  return (
+  // =====================================================
+  // RENDER
+  // =====================================================
 
+  return (
     <div className="min-h-screen bg-[#f7f3ed]">
 
       {/* ================================================= */}
@@ -352,7 +319,6 @@ const ManageOrders = () => {
       {/* ================================================= */}
 
       <div className="bg-white border-b border-[#e5ddd2]">
-
         <div className="px-5 md:px-8 lg:px-10 py-6">
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
@@ -435,7 +401,6 @@ const ManageOrders = () => {
           </div>
 
         </div>
-
       </div>
 
       {/* ================================================= */}
@@ -469,9 +434,7 @@ const ManageOrders = () => {
                 type="text"
                 value={search}
                 onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
+                  setSearch(e.target.value)
                 }
                 placeholder="Search customer, email or order ID..."
                 className="
@@ -489,11 +452,8 @@ const ManageOrders = () => {
               />
 
               {search && (
-
                 <button
-                  onClick={() =>
-                    setSearch("")
-                  }
+                  onClick={() => setSearch("")}
                   className="
                     absolute
                     right-3
@@ -502,11 +462,8 @@ const ManageOrders = () => {
                     text-[#75695e]
                   "
                 >
-
                   <X size={17} />
-
                 </button>
-
               )}
 
             </div>
@@ -516,9 +473,7 @@ const ManageOrders = () => {
             <select
               value={statusFilter}
               onChange={(e) =>
-                setStatusFilter(
-                  e.target.value
-                )
+                setStatusFilter(e.target.value)
               }
               className="
                 lg:w-52
@@ -737,10 +692,13 @@ const ManageOrders = () => {
                         <td className="px-6 py-5">
 
                           <span className="text-sm font-medium text-[#17110d]">
+
                             Rs.{" "}
+
                             {getOrderTotal(
                               order
                             ).toLocaleString()}
+
                           </span>
 
                         </td>
@@ -1027,10 +985,13 @@ const ManageOrders = () => {
                           </h4>
 
                           <p className="text-xs text-[#75695e] mt-1">
+
                             Qty:{" "}
+
                             {item.qty ||
                               item.quantity ||
                               1}
+
                           </p>
 
                         </div>
@@ -1041,8 +1002,7 @@ const ManageOrders = () => {
 
                           {(
                             Number(
-                              item.price ||
-                                0
+                              item.price || 0
                             ) *
                             Number(
                               item.qty ||
@@ -1071,10 +1031,13 @@ const ManageOrders = () => {
                 </span>
 
                 <span className="font-serif text-2xl text-[#17110d]">
+
                   Rs.{" "}
+
                   {getOrderTotal(
                     selectedOrder
                   ).toLocaleString()}
+
                 </span>
 
               </div>
@@ -1088,7 +1051,6 @@ const ManageOrders = () => {
       )}
 
     </div>
-
   );
 };
 

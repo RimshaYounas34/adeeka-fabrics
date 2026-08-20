@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext();
@@ -5,6 +6,7 @@ const CartContext = createContext();
 export const useCart = () => useContext(CartContext);
 
 const API_URL = import.meta.env.VITE_API_URL;
+
 // =====================================================
 // CART PROVIDER
 // =====================================================
@@ -17,9 +19,11 @@ export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(() => {
     try {
       const saved = localStorage.getItem("adeeka_cart");
+
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
       console.error("Cart localStorage error:", error);
+
       return [];
     }
   });
@@ -30,15 +34,26 @@ export const CartProvider = ({ children }) => {
 
   const [wishlist, setWishlist] = useState(() => {
     try {
-      const saved = localStorage.getItem("adeeka_wishlist");
+      const saved =
+        localStorage.getItem("adeeka_wishlist");
+
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
-      console.error("Wishlist localStorage error:", error);
+      console.error(
+        "Wishlist localStorage error:",
+        error
+      );
+
       return [];
     }
   });
 
+  // =====================================================
+  // STATES
+  // =====================================================
+
   const [isCartOpen, setIsCartOpen] = useState(false);
+
   const [toast, setToast] = useState(null);
 
   // =====================================================
@@ -46,7 +61,10 @@ export const CartProvider = ({ children }) => {
   // =====================================================
 
   useEffect(() => {
-    localStorage.setItem("adeeka_cart", JSON.stringify(items));
+    localStorage.setItem(
+      "adeeka_cart",
+      JSON.stringify(items)
+    );
   }, [items]);
 
   // =====================================================
@@ -82,17 +100,12 @@ export const CartProvider = ({ children }) => {
 
   // =====================================================
   // GET PRODUCT IMAGE
-  // IMPORTANT FIX
   // =====================================================
 
   const getProductImage = (product) => {
     if (!product) {
       return "/placeholder.jpg";
     }
-
-    // ---------------------------------------------
-    // Image priority
-    // ---------------------------------------------
 
     let image =
       product.image ||
@@ -104,12 +117,11 @@ export const CartProvider = ({ children }) => {
       return "/placeholder.jpg";
     }
 
-    // Make sure image is string
     image = String(image);
 
-    // ---------------------------------------------
-    // 1. Already complete URL
-    // ---------------------------------------------
+    // =================================================
+    // 1. CLOUDINARY / COMPLETE URL
+    // =================================================
 
     if (
       image.startsWith("http://") ||
@@ -119,16 +131,9 @@ export const CartProvider = ({ children }) => {
       return image;
     }
 
-    // ---------------------------------------------
+    // =================================================
     // 2. FRONTEND VITE IMAGE
-    //
-    // Example:
-    // /src/assets/images/best1.jpg
-    // /assets/images/best1.jpg
-    //
-    // IMPORTANT:
-    // Inko backend ke sath nahi lagana
-    // ---------------------------------------------
+    // =================================================
 
     if (
       image.startsWith("/src/") ||
@@ -137,43 +142,37 @@ export const CartProvider = ({ children }) => {
       return image;
     }
 
-    // ---------------------------------------------
+    // =================================================
     // 3. BACKEND UPLOAD IMAGE
-    //
-    // Example:
-    // /uploads/product.jpg
-    // uploads/product.jpg
-    // ---------------------------------------------
+    // =================================================
 
     if (
       image.startsWith("/uploads/") ||
       image.startsWith("/images/") ||
       image.startsWith("/products/")
     ) {
-      return `${API_URL}${image.startsWith("/") ? "" : "/"}${image}`;
-    }
-
-    // ---------------------------------------------
-    // 4. Other backend paths
-    // ---------------------------------------------
-
-    if (
-      image.startsWith("/api/")
-    ) {
       return `${API_URL}${image}`;
     }
 
-    // ---------------------------------------------
-    // 5. Local frontend path starting with /
-    // ---------------------------------------------
+    // =================================================
+    // 4. API PATH
+    // =================================================
+
+    if (image.startsWith("/api/")) {
+      return `${API_URL}${image}`;
+    }
+
+    // =================================================
+    // 5. LOCAL FRONTEND PATH
+    // =================================================
 
     if (image.startsWith("/")) {
       return image;
     }
 
-    // ---------------------------------------------
-    // 6. Backend path without /
-    // ---------------------------------------------
+    // =================================================
+    // 6. BACKEND PATH WITHOUT /
+    // =================================================
 
     if (
       image.includes("uploads/") ||
@@ -183,9 +182,9 @@ export const CartProvider = ({ children }) => {
       return `${API_URL}/${image}`;
     }
 
-    // ---------------------------------------------
-    // 7. Last fallback
-    // ---------------------------------------------
+    // =================================================
+    // 7. CLOUDINARY OR OTHER URL
+    // =================================================
 
     return image;
   };
@@ -196,19 +195,29 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product) => {
     const productId = getProductId(product);
-    const productImage = getProductImage(product);
 
-    console.log("ADDING PRODUCT TO CART:", product);
-    console.log("CART IMAGE:", productImage);
+    const productImage =
+      getProductImage(product);
+
+    console.log(
+      "ADDING PRODUCT TO CART:",
+      product
+    );
+
+    console.log(
+      "CART IMAGE:",
+      productImage
+    );
 
     setItems((prev) => {
       const existing = prev.find(
-        (item) => (item._id || item.id) === productId
+        (item) =>
+          (item._id || item.id) === productId
       );
 
-      // ---------------------------------------------
+      // =================================================
       // ALREADY IN CART
-      // ---------------------------------------------
+      // =================================================
 
       if (existing) {
         return prev.map((item) =>
@@ -218,10 +227,10 @@ export const CartProvider = ({ children }) => {
 
                 qty: (item.qty || 0) + 1,
 
-                // Image missing ho to new image use karo
                 image:
                   item.image &&
-                  item.image !== "/placeholder.jpg"
+                  item.image !==
+                    "/placeholder.jpg"
                     ? item.image
                     : productImage,
 
@@ -235,9 +244,9 @@ export const CartProvider = ({ children }) => {
         );
       }
 
-      // ---------------------------------------------
+      // =================================================
       // NEW PRODUCT
-      // ---------------------------------------------
+      // =================================================
 
       return [
         ...prev,
@@ -246,12 +255,11 @@ export const CartProvider = ({ children }) => {
           ...product,
 
           id: productId,
+
           _id: productId,
 
-          // Main image
           image: productImage,
 
-          // Images array bhi save karo
           images: [productImage],
 
           qty: 1,
@@ -259,7 +267,9 @@ export const CartProvider = ({ children }) => {
       ];
     });
 
-    showToast(`${product.name} added to bag`);
+    showToast(
+      `${product.name} added to bag`
+    );
 
     setIsCartOpen(true);
   };
@@ -271,7 +281,8 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = (id) => {
     setItems((prev) =>
       prev.filter(
-        (item) => (item._id || item.id) !== id
+        (item) =>
+          (item._id || item.id) !== id
       )
     );
   };
@@ -286,10 +297,35 @@ export const CartProvider = ({ children }) => {
         (item._id || item.id) === id
           ? {
               ...item,
-              qty: Math.max(1, Number(qty)),
+
+              qty: Math.max(
+                1,
+                Number(qty)
+              ),
             }
           : item
       )
+    );
+  };
+
+  // =====================================================
+  // CLEAR CART
+  // IMPORTANT:
+  // Checkout successful hone ke baad
+  // ye function cart ko completely empty karega.
+  // =====================================================
+
+  const clearCart = () => {
+    setItems([]);
+
+    localStorage.removeItem(
+      "adeeka_cart"
+    );
+
+    setIsCartOpen(false);
+
+    console.log(
+      "Cart cleared after successful checkout"
     );
   };
 
@@ -298,17 +334,22 @@ export const CartProvider = ({ children }) => {
   // =====================================================
 
   const toggleWishlist = (product) => {
-    const productId = getProductId(product);
-    const productImage = getProductImage(product);
+    const productId =
+      getProductId(product);
+
+    const productImage =
+      getProductImage(product);
 
     setWishlist((prev) => {
       const exists = prev.some(
-        (item) => (item._id || item.id) === productId
+        (item) =>
+          (item._id || item.id) ===
+          productId
       );
 
-      // ---------------------------------------------
-      // REMOVE
-      // ---------------------------------------------
+      // =================================================
+      // REMOVE FROM WISHLIST
+      // =================================================
 
       if (exists) {
         showToast(
@@ -316,13 +357,15 @@ export const CartProvider = ({ children }) => {
         );
 
         return prev.filter(
-          (item) => (item._id || item.id) !== productId
+          (item) =>
+            (item._id || item.id) !==
+            productId
         );
       }
 
-      // ---------------------------------------------
-      // ADD
-      // ---------------------------------------------
+      // =================================================
+      // ADD TO WISHLIST
+      // =================================================
 
       showToast(
         `${product.name} added to wishlist`
@@ -335,6 +378,7 @@ export const CartProvider = ({ children }) => {
           ...product,
 
           id: productId,
+
           _id: productId,
 
           image: productImage,
@@ -350,7 +394,8 @@ export const CartProvider = ({ children }) => {
   // =====================================================
 
   const cartCount = items.reduce(
-    (total, item) => total + (item.qty || 0),
+    (total, item) =>
+      total + (item.qty || 0),
     0
   );
 
@@ -361,7 +406,8 @@ export const CartProvider = ({ children }) => {
   const cartTotal = items.reduce(
     (total, item) =>
       total +
-      Number(item.price || 0) * (item.qty || 0),
+      Number(item.price || 0) *
+        (item.qty || 0),
     0
   );
 
@@ -372,25 +418,50 @@ export const CartProvider = ({ children }) => {
   return (
     <CartContext.Provider
       value={{
+        // =================================================
+        // CART
+        // =================================================
+
         items,
 
         addToCart,
+
         removeFromCart,
+
         updateQty,
 
+        clearCart,
+
         cartCount,
+
         cartTotal,
 
+        // =================================================
+        // CART DRAWER
+        // =================================================
+
         isCartOpen,
+
         setIsCartOpen,
 
+        // =================================================
+        // WISHLIST
+        // =================================================
+
         wishlist,
+
         toggleWishlist,
+
+        // =================================================
+        // TOAST
+        // =================================================
 
         toast,
 
-        // Agar future mein kahin directly image
-        // lena ho to ye bhi available hai
+        // =================================================
+        // IMAGE HELPER
+        // =================================================
+
         getProductImage,
       }}
     >

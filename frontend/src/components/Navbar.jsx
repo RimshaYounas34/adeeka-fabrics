@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import {
   Search,
@@ -9,6 +9,7 @@ import {
   User,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 
 import gsap from "gsap";
@@ -19,10 +20,35 @@ import logo from "../assets/images/adeeka-logo.png";
 import SearchBar from "./SearchBar.jsx";
 import { products } from "../data/products.js";
 
+// =====================================================
+// CHECK USER LOGIN
+// =====================================================
+
+const checkUserLogin = () => {
+  const sessionUser = sessionStorage.getItem("adeeka_user");
+  const localUser = localStorage.getItem("adeeka_user");
+
+  return sessionUser !== null || localUser !== null;
+};
+
+// =====================================================
+// NAVBAR
+// =====================================================
+
 const Navbar = () => {
+  const navigate = useNavigate();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // =====================================================
+  // USER LOGIN STATE
+  // =====================================================
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return checkUserLogin();
+  });
 
   const {
     cartCount,
@@ -32,7 +58,79 @@ const Navbar = () => {
 
   const textRef = useRef(null);
 
+  // =====================================================
+  // CHECK LOGIN STATUS
+  // =====================================================
+
+  const checkLoginStatus = () => {
+    const loggedIn = checkUserLogin();
+
+    setIsLoggedIn(loggedIn);
+  };
+
+  // =====================================================
+  // LOGIN / LOGOUT LISTENER
+  // =====================================================
+
   useEffect(() => {
+    // Initial check
+    checkLoginStatus();
+
+    // Custom event
+    const handleAuthChange = () => {
+      checkLoginStatus();
+    };
+
+    // Browser storage event
+    const handleStorageChange = () => {
+      checkLoginStatus();
+    };
+
+    // Window focus
+    const handleFocus = () => {
+      checkLoginStatus();
+    };
+
+    window.addEventListener(
+      "adeeka-auth-change",
+      handleAuthChange
+    );
+
+    window.addEventListener(
+      "storage",
+      handleStorageChange
+    );
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      window.removeEventListener(
+        "adeeka-auth-change",
+        handleAuthChange
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleStorageChange
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
+  }, []);
+
+  // =====================================================
+  // GSAP TOP BAR
+  // =====================================================
+
+  useEffect(() => {
+    if (!textRef.current) return;
+
     gsap.fromTo(
       textRef.current,
       {
@@ -47,6 +145,37 @@ const Navbar = () => {
       }
     );
   }, []);
+
+  // =====================================================
+  // LOGOUT
+  // =====================================================
+
+  const handleLogout = () => {
+    // Remove user from both storages
+    sessionStorage.removeItem("adeeka_user");
+    localStorage.removeItem("adeeka_user");
+
+    // Update navbar immediately
+    setIsLoggedIn(false);
+
+    // Close dropdown
+    setProfileOpen(false);
+
+    // Close mobile menu
+    setMenuOpen(false);
+
+    // Notify other components
+    window.dispatchEvent(
+      new Event("adeeka-auth-change")
+    );
+
+    // Go home
+    navigate("/");
+  };
+
+  // =====================================================
+  // NAV LINK STYLE
+  // =====================================================
 
   const navLinkClass = ({ isActive }) =>
     `
@@ -70,11 +199,17 @@ const Navbar = () => {
       }
     `;
 
+  // =====================================================
+  // RETURN
+  // =====================================================
+
   return (
     <>
       <nav className="sticky top-0 z-50">
 
-        {/* ================= TOP BAR ================= */}
+        {/* ================================================= */}
+        {/* TOP BAR */}
+        {/* ================================================= */}
 
         <div
           className="
@@ -101,8 +236,9 @@ const Navbar = () => {
           </div>
         </div>
 
-
-        {/* ================= MAIN NAVBAR ================= */}
+        {/* ================================================= */}
+        {/* MAIN NAVBAR */}
+        {/* ================================================= */}
 
         <div
           className="
@@ -117,7 +253,7 @@ const Navbar = () => {
           "
         >
 
-          {/* MOBILE MENU */}
+          {/* ================= MOBILE MENU ================= */}
 
           <button
             className="lg:hidden"
@@ -127,8 +263,7 @@ const Navbar = () => {
             <Menu size={18} />
           </button>
 
-
-          {/* LOGO */}
+          {/* ================= LOGO ================= */}
 
           <NavLink
             to="/"
@@ -141,8 +276,9 @@ const Navbar = () => {
             />
           </NavLink>
 
-
-          {/* ================= DESKTOP LINKS ================= */}
+          {/* ================================================= */}
+          {/* DESKTOP LINKS */}
+          {/* ================================================= */}
 
           <div
             className="
@@ -154,18 +290,12 @@ const Navbar = () => {
               uppercase
             "
           >
-
-            {/* Home */}
-
             <NavLink
               to="/"
               className={navLinkClass}
             >
               Home
             </NavLink>
-
-
-            {/* New Arrivals */}
 
             <NavLink
               to="/new-arrivals"
@@ -174,18 +304,12 @@ const Navbar = () => {
               New Arrivals
             </NavLink>
 
-
-            {/* Unstitched */}
-
             <NavLink
               to="/shop/unstitched"
               className={navLinkClass}
             >
               Unstitched
             </NavLink>
-
-
-            {/* Collections */}
 
             <NavLink
               to="/collections"
@@ -194,18 +318,12 @@ const Navbar = () => {
               Collections
             </NavLink>
 
-
-            {/* Pret */}
-
             <NavLink
               to="/pret"
               className={navLinkClass}
             >
               Pret
             </NavLink>
-
-
-            {/* Luxury */}
 
             <NavLink
               to="/luxury"
@@ -214,9 +332,6 @@ const Navbar = () => {
               Luxury
             </NavLink>
 
-
-            {/* SALE */}
-
             <NavLink
               to="/sale"
               className={navLinkClass}
@@ -224,20 +339,17 @@ const Navbar = () => {
               Sale
             </NavLink>
 
-
-            {/* About */}
-
             <NavLink
               to="/about"
               className={navLinkClass}
             >
               About Us
             </NavLink>
-
           </div>
 
-
-          {/* ================= RIGHT ICONS ================= */}
+          {/* ================================================= */}
+          {/* RIGHT ICONS */}
+          {/* ================================================= */}
 
           <div className="flex items-center gap-4">
 
@@ -253,7 +365,6 @@ const Navbar = () => {
             >
               <Search size={18} />
             </button>
-
 
             {/* WISHLIST */}
 
@@ -291,7 +402,6 @@ const Navbar = () => {
               )}
             </NavLink>
 
-
             {/* CART */}
 
             <button
@@ -328,13 +438,16 @@ const Navbar = () => {
               )}
             </button>
 
-
-            {/* ================= USER ================= */}
+            {/* ================================================= */}
+            {/* USER */}
+            {/* ================================================= */}
 
             <div className="relative">
 
               <button
-                onClick={() => setProfileOpen(!profileOpen)}
+                onClick={() =>
+                  setProfileOpen(!profileOpen)
+                }
                 className="
                   hover:text-[#b18442]
                   transition
@@ -344,8 +457,9 @@ const Navbar = () => {
                 <User size={18} />
               </button>
 
-
+              {/* ================================================= */}
               {/* PROFILE DROPDOWN */}
+              {/* ================================================= */}
 
               {profileOpen && (
                 <div
@@ -353,7 +467,7 @@ const Navbar = () => {
                     absolute
                     right-0
                     top-8
-                    w-40
+                    w-44
                     bg-white
                     text-[#17110d]
                     shadow-xl
@@ -364,66 +478,103 @@ const Navbar = () => {
                   "
                 >
 
-                  {/* PROFILE */}
+                  {/* ================================================= */}
+                  {/* LOGGED IN */}
+                  {/* ================================================= */}
 
-                  <NavLink
-                    to="/profile"
-                    onClick={() => setProfileOpen(false)}
-                    className="
-                      block
-                      px-5
-                      py-3
-                      text-sm
-                      hover:bg-[#f5eee4]
-                      hover:text-[#b18442]
-                      transition
-                    "
-                  >
-                    Profile
-                  </NavLink>
+                  {isLoggedIn ? (
+                    <>
+                      {/* PROFILE */}
 
+                      <NavLink
+                        to="/profile"
+                        onClick={() =>
+                          setProfileOpen(false)
+                        }
+                        className="
+                          block
+                          px-5
+                          py-3
+                          text-sm
+                          hover:bg-[#f5eee4]
+                          hover:text-[#b18442]
+                          transition
+                        "
+                      >
+                        Profile
+                      </NavLink>
 
-                  {/* ORDERS */}
+                      {/* ORDERS */}
 
-                  <NavLink
-                    to="/orders"
-                    onClick={() => setProfileOpen(false)}
-                    className="
-                      block
-                      px-5
-                      py-3
-                      text-sm
-                      hover:bg-[#f5eee4]
-                      hover:text-[#b18442]
-                      transition
-                    "
-                  >
-                    Orders
-                  </NavLink>
+                      <NavLink
+                        to="/orders"
+                        onClick={() =>
+                          setProfileOpen(false)
+                        }
+                        className="
+                          block
+                          px-5
+                          py-3
+                          text-sm
+                          hover:bg-[#f5eee4]
+                          hover:text-[#b18442]
+                          transition
+                        "
+                      >
+                        Orders
+                      </NavLink>
 
+                      {/* DIVIDER */}
 
-                  {/* LINE */}
+                      <div className="border-t border-[#e5ddd3] my-1" />
 
-                  <div className="border-t border-[#e5ddd3] my-1"></div>
+                      {/* LOGOUT */}
 
+                      <button
+                        onClick={handleLogout}
+                        className="
+                          w-full
+                          text-left
+                          px-5
+                          py-3
+                          text-sm
+                          flex
+                          items-center
+                          gap-2
+                          hover:bg-[#f5eee4]
+                          hover:text-[#b18442]
+                          transition
+                        "
+                      >
+                        <LogOut size={15} />
 
-                  {/* LOGIN */}
+                        Logout
+                      </button>
+                    </>
+                  ) : (
 
-                  <NavLink
-                    to="/login"
-                    onClick={() => setProfileOpen(false)}
-                    className="
-                      block
-                      px-5
-                      py-3
-                      text-sm
-                      hover:bg-[#f5eee4]
-                      hover:text-[#b18442]
-                      transition
-                    "
-                  >
-                    Login
-                  </NavLink>
+                    /* ================================================= */
+                    /* NOT LOGGED IN */
+                    /* ================================================= */
+
+                    <NavLink
+                      to="/login"
+                      onClick={() =>
+                        setProfileOpen(false)
+                      }
+                      className="
+                        block
+                        px-5
+                        py-3
+                        text-sm
+                        hover:bg-[#f5eee4]
+                        hover:text-[#b18442]
+                        transition
+                      "
+                    >
+                      Login
+                    </NavLink>
+                  )}
 
                 </div>
               )}
@@ -434,8 +585,9 @@ const Navbar = () => {
 
         </div>
 
-
-        {/* ================= MOBILE MENU ================= */}
+        {/* ================================================= */}
+        {/* MOBILE MENU */}
+        {/* ================================================= */}
 
         {menuOpen && (
           <div
@@ -459,7 +611,6 @@ const Navbar = () => {
               <X size={28} />
             </button>
 
-
             {/* MOBILE LOGO */}
 
             <img
@@ -467,7 +618,6 @@ const Navbar = () => {
               alt="Adeeka Fabrics"
               className="w-32 mb-10"
             />
-
 
             {/* MOBILE LINKS */}
 
@@ -480,8 +630,6 @@ const Navbar = () => {
               "
             >
 
-              {/* Home */}
-
               <NavLink
                 to="/"
                 onClick={() => setMenuOpen(false)}
@@ -489,9 +637,6 @@ const Navbar = () => {
               >
                 Home
               </NavLink>
-
-
-              {/* New Arrivals */}
 
               <NavLink
                 to="/new-arrivals"
@@ -501,9 +646,6 @@ const Navbar = () => {
                 New Arrivals
               </NavLink>
 
-
-              {/* Unstitched */}
-
               <NavLink
                 to="/shop/unstitched"
                 onClick={() => setMenuOpen(false)}
@@ -511,9 +653,6 @@ const Navbar = () => {
               >
                 Unstitched
               </NavLink>
-
-
-              {/* Collections */}
 
               <NavLink
                 to="/collections"
@@ -523,9 +662,6 @@ const Navbar = () => {
                 Collections
               </NavLink>
 
-
-              {/* Pret */}
-
               <NavLink
                 to="/pret"
                 onClick={() => setMenuOpen(false)}
@@ -533,9 +669,6 @@ const Navbar = () => {
               >
                 Pret
               </NavLink>
-
-
-              {/* Luxury */}
 
               <NavLink
                 to="/luxury"
@@ -545,9 +678,6 @@ const Navbar = () => {
                 Luxury
               </NavLink>
 
-
-              {/* SALE */}
-
               <NavLink
                 to="/sale"
                 onClick={() => setMenuOpen(false)}
@@ -555,9 +685,6 @@ const Navbar = () => {
               >
                 Sale
               </NavLink>
-
-
-              {/* About */}
 
               <NavLink
                 to="/about"
@@ -567,16 +694,49 @@ const Navbar = () => {
                 About Us
               </NavLink>
 
+              {/* ================================================= */}
+              {/* MOBILE PROFILE */}
+              {/* ================================================= */}
 
-              {/* Profile */}
+              {isLoggedIn ? (
+                <>
+                  <NavLink
+                    to="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className={navLinkClass}
+                  >
+                    Profile
+                  </NavLink>
 
-              <NavLink
-                to="/profile"
-                onClick={() => setMenuOpen(false)}
-                className={navLinkClass}
-              >
-                Profile
-              </NavLink>
+                  <NavLink
+                    to="/orders"
+                    onClick={() => setMenuOpen(false)}
+                    className={navLinkClass}
+                  >
+                    Orders
+                  </NavLink>
+
+                  <button
+                    onClick={handleLogout}
+                    className="
+                      text-left
+                      text-2xl
+                      hover:text-[#b18442]
+                      transition
+                    "
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <NavLink
+                  to="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className={navLinkClass}
+                >
+                  Login
+                </NavLink>
+              )}
 
             </div>
 
@@ -585,8 +745,9 @@ const Navbar = () => {
 
       </nav>
 
-
-      {/* ================= SEARCH BAR ================= */}
+      {/* ================================================= */}
+      {/* SEARCH BAR */}
+      {/* ================================================= */}
 
       {searchOpen && (
         <SearchBar
@@ -599,4 +760,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

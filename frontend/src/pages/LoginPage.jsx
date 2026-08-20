@@ -11,6 +11,19 @@ import { auth, googleProvider } from "../firebase.js";
 
 import logo from "../assets/images/adeeka-logo.png";
 
+// =====================================================
+// API URL
+// =====================================================
+
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
+// =====================================================
+// LOGIN PAGE
+// =====================================================
+
 const LoginPage = () => {
   const navigate = useNavigate();
 
@@ -20,41 +33,132 @@ const LoginPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
 
-  // ================= SAVE USER TO MONGODB =================
+  // =====================================================
+  // SAVE USER TO LOCAL STORAGE
+  // =====================================================
+
+  const saveUserToLocalStorage = (user) => {
+    const userData = {
+      uid: user.uid,
+      name: user.displayName || "User",
+      email: user.email,
+      photo: user.photoURL || "",
+      role: "user",
+    };
+
+    localStorage.setItem(
+      "adeeka_user",
+      JSON.stringify(userData)
+    );
+
+    console.log(
+      "User saved to localStorage:",
+      userData
+    );
+  };
+
+  // =====================================================
+  // SAVE / CREATE USER IN MONGODB
+  // =====================================================
 
   const saveUserToMongoDB = async (firebaseUser) => {
     try {
-      const response = await fetch("http://localhost:5000/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: firebaseUser.displayName || "User",
-          email: firebaseUser.email,
-        }),
-      });
+      const userData = {
+        firebaseUid: firebaseUser.uid,
+
+        name:
+          firebaseUser.displayName ||
+          "User",
+
+        email: firebaseUser.email,
+
+        password: "",
+
+        role: "user",
+      };
+
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "SENDING USER TO MONGODB:"
+      );
+
+      console.log(userData);
+
+      console.log(
+        "API URL:",
+        `${API_URL}/api/users`
+      );
+
+      console.log(
+        "================================="
+      );
+
+      const response = await fetch(
+        `${API_URL}/api/users`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(userData),
+        }
+      );
 
       const data = await response.json();
 
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "MONGODB USER RESPONSE:"
+      );
+
+      console.log(data);
+
+      console.log(
+        "STATUS:",
+        response.status
+      );
+
+      console.log(
+        "================================="
+      );
+
       if (!response.ok) {
-        console.log("MongoDB error:", data);
-        return false;
+        throw new Error(
+          data.message ||
+            "User could not be saved in MongoDB"
+        );
       }
 
-      console.log("User saved in MongoDB:", data);
+      return data;
 
-      return true;
     } catch (error) {
-      console.log("MongoDB connection error:", error);
-      return false;
+      console.error(
+        "MongoDB Save Error:",
+        error
+      );
+
+      throw error;
     }
   };
 
-  // ================= SUCCESS POPUP =================
+  // =====================================================
+  // SUCCESS POPUP
+  // =====================================================
 
   const showLoginSuccess = (name) => {
-    setSuccessName(name || "Welcome to Adeeka Fabrics");
+    setSuccessName(
+      name ||
+        "Welcome to Adeeka Fabrics"
+    );
+
     setShowSuccess(true);
 
     setTimeout(() => {
@@ -62,122 +166,285 @@ const LoginPage = () => {
     }, 2000);
   };
 
-  // ================= EMAIL LOGIN =================
+  // =====================================================
+  // EMAIL LOGIN
+  // =====================================================
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
-      alert("Please enter email and password");
+      alert(
+        "Please enter email and password"
+      );
+
       return;
     }
 
     try {
-      // Firebase login
-      const result = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
+      // =================================================
+      // FIREBASE LOGIN
+      // =================================================
+
+      const result =
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+      const firebaseUser = result.user;
+
+      console.log(
+        "Firebase Login Successful:",
+        firebaseUser
       );
 
-      // Firebase user
-      const user = {
-        uid: result.user.uid,
-        name: result.user.displayName || "User",
-        email: result.user.email,
-        photo: result.user.photoURL || "",
-      };
+      // =================================================
+      // SAVE / CREATE USER IN MONGODB
+      // =================================================
 
-      // LocalStorage
-      localStorage.setItem(
-        "adeeka_user",
-        JSON.stringify(user)
+      await saveUserToMongoDB(
+        firebaseUser
       );
 
-      // MongoDB mein save
-      await saveUserToMongoDB(result.user);
+      // =================================================
+      // SAVE USER TO LOCAL STORAGE
+      // =================================================
 
-      // Success popup
+      saveUserToLocalStorage(
+        firebaseUser
+      );
+
+      // =================================================
+      // SUCCESS
+      // =================================================
+
       showLoginSuccess(
-        result.user.displayName || "Welcome to Adeeka Fabrics"
+        firebaseUser.displayName ||
+          "Welcome to Adeeka Fabrics"
       );
 
     } catch (error) {
-      console.log(error);
+      console.error(
+        "================================="
+      );
+
+      console.error(
+        "LOGIN ERROR:",
+        error
+      );
+
+      console.error(
+        "================================="
+      );
+
+      // =================================================
+      // FIREBASE ERRORS
+      // =================================================
 
       if (
-        error.code === "auth/invalid-credential" ||
-        error.code === "auth/invalid-login-credentials"
+        error.code ===
+          "auth/invalid-credential" ||
+        error.code ===
+          "auth/invalid-login-credentials"
       ) {
-        alert("Invalid email or password");
-      } else if (error.code === "auth/user-not-found") {
-        alert("Account not found. Please signup first.");
-      } else if (error.code === "auth/wrong-password") {
-        alert("Wrong password");
+        alert(
+          "Invalid email or password."
+        );
+
+      } else if (
+        error.code ===
+        "auth/user-not-found"
+      ) {
+        alert(
+          "Account not found. Please signup first."
+        );
+
+      } else if (
+        error.code ===
+        "auth/wrong-password"
+      ) {
+        alert(
+          "Wrong password."
+        );
+
+      } else if (
+        error.code ===
+        "auth/too-many-requests"
+      ) {
+        alert(
+          "Too many login attempts. Please try again later."
+        );
+
+      } else if (
+        error.message?.includes(
+          "Route not found"
+        )
+      ) {
+        alert(
+          "MongoDB API route not found. Please check backend server."
+        );
+
+      } else if (
+        error.message?.includes(
+          "MongoDB"
+        )
+      ) {
+        alert(
+          "Firebase login successful, but MongoDB could not save the user."
+        );
+
       } else {
-        alert("Login failed. Please try again.");
+        alert(
+          error.message ||
+            "Login failed. Please try again."
+        );
       }
     }
   };
 
-  // ================= GOOGLE LOGIN =================
+  // =====================================================
+  // GOOGLE LOGIN
+  // =====================================================
 
   const handleGoogleLogin = async () => {
     try {
-      // Google Firebase login
-      const result = await signInWithPopup(
-        auth,
-        googleProvider
+      // =================================================
+      // GOOGLE FIREBASE LOGIN
+      // =================================================
+
+      const result =
+        await signInWithPopup(
+          auth,
+          googleProvider
+        );
+
+      const firebaseUser =
+        result.user;
+
+      console.log(
+        "Google Firebase User:",
+        firebaseUser
       );
 
-      // Firebase user
-      const user = {
-        uid: result.user.uid,
-        name: result.user.displayName || "User",
-        email: result.user.email,
-        photo: result.user.photoURL || "",
-      };
+      // =================================================
+      // SAVE / CREATE GOOGLE USER IN MONGODB
+      // =================================================
 
-      // LocalStorage
-      localStorage.setItem(
-        "adeeka_user",
-        JSON.stringify(user)
+      await saveUserToMongoDB(
+        firebaseUser
       );
 
-      // MongoDB mein save
-      await saveUserToMongoDB(result.user);
+      // =================================================
+      // SAVE USER TO LOCAL STORAGE
+      // =================================================
 
-      // Success popup
+      saveUserToLocalStorage(
+        firebaseUser
+      );
+
+      // =================================================
+      // SUCCESS
+      // =================================================
+
       showLoginSuccess(
-        result.user.displayName || "Welcome to Adeeka Fabrics"
+        firebaseUser.displayName ||
+          "Welcome to Adeeka Fabrics"
       );
 
     } catch (error) {
-      console.log(error);
+      console.error(
+        "================================="
+      );
 
-      if (error.code === "auth/popup-closed-by-user") {
+      console.error(
+        "GOOGLE LOGIN ERROR:",
+        error
+      );
+
+      console.error(
+        "================================="
+      );
+
+      // =================================================
+      // GOOGLE FIREBASE ERRORS
+      // =================================================
+
+      if (
+        error.code ===
+        "auth/popup-closed-by-user"
+      ) {
         return;
       }
 
-      if (error.code === "auth/popup-blocked") {
+      if (
+        error.code ===
+        "auth/popup-blocked"
+      ) {
         alert(
           "Google login popup was blocked. Please allow popups."
         );
+
         return;
       }
 
-      if (error.code === "auth/cancelled-popup-request") {
+      if (
+        error.code ===
+        "auth/cancelled-popup-request"
+      ) {
         return;
       }
 
-      alert("Google login failed. Please try again.");
+      // =================================================
+      // MONGODB ROUTE ERROR
+      // =================================================
+
+      if (
+        error.message?.includes(
+          "Route not found"
+        )
+      ) {
+        alert(
+          "Google login successful, but MongoDB API route was not found."
+        );
+
+        return;
+      }
+
+      // =================================================
+      // MONGODB ERROR
+      // =================================================
+
+      if (
+        error.message?.includes(
+          "MongoDB"
+        )
+      ) {
+        alert(
+          "Google login successful, but MongoDB could not save the user."
+        );
+
+        return;
+      }
+
+      alert(
+        error.message ||
+          "Google login failed. Please try again."
+      );
     }
   };
+
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
     <section className="min-h-screen bg-[#f5eee4] flex items-center justify-center px-6 py-12">
 
-      {/* ================= SUCCESS POPUP ================= */}
+      {/* ================================================= */}
+      {/* SUCCESS POPUP */}
+      {/* ================================================= */}
 
       {showSuccess && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-6">
@@ -194,8 +461,6 @@ const LoginPage = () => {
               border-[#d8cec1]
             "
           >
-
-            {/* CHECK ICON */}
 
             <div
               className="
@@ -215,19 +480,13 @@ const LoginPage = () => {
               </span>
             </div>
 
-            {/* TITLE */}
-
             <h2 className="font-serif text-2xl text-[#17110d]">
               Login Successful
             </h2>
 
-            {/* MESSAGE */}
-
             <p className="text-sm text-[#75695e] mt-2">
               Welcome {successName} ❤️
             </p>
-
-            {/* GOLD LINE */}
 
             <div className="mt-6 w-full h-[2px] bg-[#d8cec1] overflow-hidden">
 
@@ -235,7 +494,6 @@ const LoginPage = () => {
                 className="
                   h-full
                   bg-[#b18442]
-                  animate-[loading_2s_linear]
                 "
                 style={{
                   width: "100%",
@@ -253,7 +511,9 @@ const LoginPage = () => {
         </div>
       )}
 
-      {/* ================= LOGIN CARD ================= */}
+      {/* ================================================= */}
+      {/* LOGIN CARD */}
+      {/* ================================================= */}
 
       <div className="w-full max-w-md bg-white p-8 md:p-10 shadow-sm">
 
@@ -346,9 +606,12 @@ const LoginPage = () => {
             </label>
 
             <input
+              required
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               placeholder="Enter your email"
               className="
                 w-full
@@ -388,9 +651,12 @@ const LoginPage = () => {
             </div>
 
             <input
+              required
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
               placeholder="Enter your password"
               className="
                 w-full
