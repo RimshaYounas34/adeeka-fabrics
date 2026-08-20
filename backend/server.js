@@ -16,10 +16,40 @@ import adminRoutes from "./routes/admin.js";
 const app = express();
 
 // =====================================================
-// MIDDLEWARE
+// CORS
 // =====================================================
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://adeeka-fabrics.vercel.app",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Postman / server-to-server requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(
+          `CORS blocked for origin: ${origin}`
+        )
+      );
+    },
+
+    credentials: true,
+  })
+);
+
+// =====================================================
+// MIDDLEWARE
+// =====================================================
 
 app.use(express.json());
 
@@ -96,6 +126,18 @@ app.use(
       "Server Error:",
       error
     );
+
+    // CORS error
+    if (
+      error.message?.startsWith(
+        "CORS blocked"
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
 
     res.status(500).json({
       success: false,
