@@ -2,39 +2,24 @@ import express from "express";
 
 import {
   adminLogin,
-  getAdminProfile,
   getDashboardStats,
   getAllUsers,
   getAllOrders,
-  getSingleOrder,
-  updateOrderStatus,
+  // baqi existing controllers...
 } from "../controllers/adminController.js";
 
 import adminMiddleware from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-
 // =====================================================
-// ADMIN LOGIN
+// ADMIN LOGIN - PUBLIC
 // =====================================================
 
 router.post(
   "/login",
   adminLogin
 );
-
-
-// =====================================================
-// ADMIN PROFILE
-// =====================================================
-
-router.get(
-  "/profile",
-  adminMiddleware,
-  getAdminProfile
-);
-
 
 // =====================================================
 // ADMIN DASHBOARD
@@ -46,7 +31,6 @@ router.get(
   getDashboardStats
 );
 
-
 // =====================================================
 // GET ALL USERS
 // =====================================================
@@ -57,7 +41,6 @@ router.get(
   getAllUsers
 );
 
-
 // =====================================================
 // GET ALL ORDERS
 // =====================================================
@@ -67,28 +50,5 @@ router.get(
   adminMiddleware,
   getAllOrders
 );
-
-
-// =====================================================
-// GET SINGLE ORDER
-// =====================================================
-
-router.get(
-  "/orders/:id",
-  adminMiddleware,
-  getSingleOrder
-);
-
-
-// =====================================================
-// UPDATE ORDER STATUS
-// =====================================================
-
-router.put(
-  "/orders/:id",
-  adminMiddleware,
-  updateOrderStatus
-);
-
 
 export default router;
