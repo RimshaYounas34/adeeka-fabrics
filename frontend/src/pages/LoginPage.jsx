@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -17,7 +16,7 @@ import logo from "../assets/images/adeeka-logo.png";
 
 const API_URL = (
   import.meta.env.VITE_API_URL ||
-  "http://localhost:5000"
+  "http://localhost:5000/api"
 ).replace(/\/$/, "");
 
 // =====================================================
@@ -89,7 +88,7 @@ const LoginPage = () => {
 
       console.log(
         "API URL:",
-        `${API_URL}/api/users`
+        `${API_URL}/users`
       );
 
       console.log(
@@ -97,7 +96,7 @@ const LoginPage = () => {
       );
 
       const response = await fetch(
-        `${API_URL}/api/users`,
+        `${API_URL}/users`,
         {
           method: "POST",
 
