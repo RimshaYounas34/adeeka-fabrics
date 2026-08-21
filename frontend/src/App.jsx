@@ -93,12 +93,15 @@ const isUserLoggedIn = () => {
 // =====================================================
 
 const isAdminLoggedIn = () => {
-
   const token =
-    localStorage.getItem("adeeka_admin_token");
+    sessionStorage.getItem(
+      "adeeka_admin_token"
+    );
 
   const admin =
-    localStorage.getItem("adeeka_admin");
+    sessionStorage.getItem(
+      "adeeka_admin"
+    );
 
   return Boolean(
     token &&
@@ -112,7 +115,6 @@ const isAdminLoggedIn = () => {
 // =====================================================
 
 const ProtectedRoute = ({ children }) => {
-
   if (!isUserLoggedIn()) {
     return (
       <Navigate
@@ -131,32 +133,34 @@ const ProtectedRoute = ({ children }) => {
 // =====================================================
 
 const AdminProtectedRoute = ({ children }) => {
-
   const location = useLocation();
 
   const adminLoggedIn =
     isAdminLoggedIn();
 
+  // ===================================================
+  // DEBUG ADMIN AUTH
+  // ===================================================
+
   console.log(
     "ADMIN TOKEN:",
-    localStorage.getItem(
+    sessionStorage.getItem(
       "adeeka_admin_token"
     )
   );
 
   console.log(
     "ADMIN DATA:",
-    localStorage.getItem(
+    sessionStorage.getItem(
       "adeeka_admin"
     )
   );
 
-  // ================================================
+  // ===================================================
   // ADMIN LOGIN NAHI HAI
-  // ================================================
+  // ===================================================
 
   if (!adminLoggedIn) {
-
     return (
       <Navigate
         to="/admin/login"
@@ -168,9 +172,9 @@ const AdminProtectedRoute = ({ children }) => {
     );
   }
 
-  // ================================================
+  // ===================================================
   // ADMIN LOGIN HAI
-  // ================================================
+  // ===================================================
 
   return children;
 };
@@ -181,7 +185,6 @@ const AdminProtectedRoute = ({ children }) => {
 // =====================================================
 
 function App() {
-
   const location =
     useLocation();
 
@@ -198,13 +201,10 @@ function App() {
   // ===================================================
 
   useEffect(() => {
-
     const checkAuth = () => {
-
       setLoggedIn(
         isUserLoggedIn()
       );
-
     };
 
     window.addEventListener(
@@ -220,7 +220,6 @@ function App() {
     checkAuth();
 
     return () => {
-
       window.removeEventListener(
         "adeeka-auth-change",
         checkAuth
@@ -230,9 +229,7 @@ function App() {
         "storage",
         checkAuth
       );
-
     };
-
   }, []);
 
 
@@ -241,12 +238,10 @@ function App() {
   // ===================================================
 
   useEffect(() => {
-
     window.scrollTo(
       0,
       0
     );
-
   }, [
     location.pathname,
   ]);
@@ -257,10 +252,9 @@ function App() {
   // ===================================================
 
   return (
-
     <div className="min-h-screen flex flex-col">
 
-      {/* GLOBAL */}
+      {/* ================= GLOBAL ================= */}
 
       <Preloader />
 
@@ -279,7 +273,9 @@ function App() {
 
           <Route
             path="/"
-            element={<Home />}
+            element={
+              <Home />
+            }
           />
 
 
@@ -287,12 +283,16 @@ function App() {
 
           <Route
             path="/login"
-            element={<LoginPage />}
+            element={
+              <LoginPage />
+            }
           />
 
           <Route
             path="/register"
-            element={<RegisterPage />}
+            element={
+              <RegisterPage />
+            }
           />
 
 
