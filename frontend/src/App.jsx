@@ -70,6 +70,7 @@ import BestSellersPage from "./pages/BestSellersPage.jsx";
 
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
+
 // =====================================================
 // USER LOGIN CHECK
 // =====================================================
@@ -86,45 +87,28 @@ const isUserLoggedIn = () => {
   );
 };
 
+
 // =====================================================
 // ADMIN LOGIN CHECK
 // =====================================================
 
 const isAdminLoggedIn = () => {
-  // Check sessionStorage first
-  const sessionToken =
-    sessionStorage.getItem(
-      "adeeka_admin_token"
-    );
-
-  const sessionAdmin =
-    sessionStorage.getItem(
-      "adeeka_admin"
-    );
-
-  // Also check localStorage
-  // This keeps compatibility with previous setup
-  const localToken =
-    localStorage.getItem(
-      "adeeka_admin_token"
-    );
-
-  const localAdmin =
-    localStorage.getItem(
-      "adeeka_admin"
-    );
-
   const token =
-    sessionToken || localToken;
+    sessionStorage.getItem(
+      "adeeka_admin_token"
+    );
 
   const admin =
-    sessionAdmin || localAdmin;
+    sessionStorage.getItem(
+      "adeeka_admin"
+    );
 
   return Boolean(
     token &&
     admin
   );
 };
+
 
 // =====================================================
 // USER PROTECTED ROUTE
@@ -143,6 +127,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+
 // =====================================================
 // ADMIN PROTECTED ROUTE
 // =====================================================
@@ -157,47 +142,18 @@ const AdminProtectedRoute = ({ children }) => {
   // DEBUG ADMIN AUTH
   // ===================================================
 
-  const sessionToken =
-    sessionStorage.getItem(
-      "adeeka_admin_token"
-    );
-
-  const localToken =
-    localStorage.getItem(
-      "adeeka_admin_token"
-    );
-
-  const sessionAdmin =
-    sessionStorage.getItem(
-      "adeeka_admin"
-    );
-
-  const localAdmin =
-    localStorage.getItem(
-      "adeeka_admin"
-    );
-
-  console.log(
-    "================================="
-  );
-
   console.log(
     "ADMIN TOKEN:",
-    sessionToken || localToken
+    sessionStorage.getItem(
+      "adeeka_admin_token"
+    )
   );
 
   console.log(
     "ADMIN DATA:",
-    sessionAdmin || localAdmin
-  );
-
-  console.log(
-    "ADMIN LOGGED IN:",
-    adminLoggedIn
-  );
-
-  console.log(
-    "================================="
+    sessionStorage.getItem(
+      "adeeka_admin"
+    )
   );
 
   // ===================================================
@@ -223,6 +179,7 @@ const AdminProtectedRoute = ({ children }) => {
   return children;
 };
 
+
 // =====================================================
 // APP
 // =====================================================
@@ -237,6 +194,7 @@ function App() {
   ] = useState(
     isUserLoggedIn()
   );
+
 
   // ===================================================
   // USER AUTH LISTENER
@@ -274,6 +232,7 @@ function App() {
     };
   }, []);
 
+
   // ===================================================
   // SCROLL TOP
   // ===================================================
@@ -286,6 +245,7 @@ function App() {
   }, [
     location.pathname,
   ]);
+
 
   // ===================================================
   // RETURN
@@ -304,6 +264,7 @@ function App() {
 
       <Marquee />
 
+
       <main className="flex-1">
 
         <Routes>
@@ -316,6 +277,7 @@ function App() {
               <Home />
             }
           />
+
 
           {/* ================= USER AUTH ================= */}
 
@@ -332,6 +294,7 @@ function App() {
               <RegisterPage />
             }
           />
+
 
           {/* ================= USER PAGES ================= */}
 
@@ -506,6 +469,7 @@ function App() {
             }
           />
 
+
           {/* ================================================= */}
           {/* ADMIN LOGIN - PUBLIC */}
           {/* ================================================= */}
@@ -516,6 +480,7 @@ function App() {
               <AdminLogin />
             }
           />
+
 
           {/* ================================================= */}
           {/* ADMIN DASHBOARD - PROTECTED */}
@@ -530,6 +495,7 @@ function App() {
             }
           />
 
+
           {/* ================================================= */}
           {/* ADMIN ADD PRODUCT - PROTECTED */}
           {/* ================================================= */}
@@ -542,6 +508,7 @@ function App() {
               </AdminProtectedRoute>
             }
           />
+
 
           {/* ================================================= */}
           {/* ADMIN PRODUCTS - PROTECTED */}
@@ -556,6 +523,7 @@ function App() {
             }
           />
 
+
           {/* ================================================= */}
           {/* ADMIN USERS - PROTECTED */}
           {/* ================================================= */}
@@ -568,6 +536,7 @@ function App() {
               </AdminProtectedRoute>
             }
           />
+
 
           {/* ================================================= */}
           {/* ADMIN ORDERS - PROTECTED */}
@@ -582,6 +551,7 @@ function App() {
             }
           />
 
+
           {/* ================= NOT FOUND ================= */}
 
           <Route
@@ -594,6 +564,7 @@ function App() {
         </Routes>
 
       </main>
+
 
       {/* ================= FOOTER ================= */}
 
